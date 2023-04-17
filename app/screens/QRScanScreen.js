@@ -6,6 +6,8 @@ import {
   View,
   Image,
   TouchableOpacity,
+  Button,
+  Linking 
 } from "react-native";
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
@@ -15,6 +17,7 @@ import * as FaceDetector from "expo-face-detector";
 
 import colors from "../config/colors";
 import { normalize } from "../utils/normalize";
+import { BarCodeScanner } from 'expo-barcode-scanner';
 
 export default function QRScanScreen({ navigation }) {
   let cameraRef = useRef();
@@ -23,6 +26,10 @@ export default function QRScanScreen({ navigation }) {
   const [hasCameraPermission, setCameraPermission] = useState();
   const [faceDetected, setFaceDetected] = useState(false);
   const [photo, setPhoto] = useState(null);
+  const [hasPermission, setHasPermission] = useState(null);
+  const [scanned, setScanned] = useState(false);
+  const [data, setData] = useState("")
+  const [type, setType] = useState("")
 
   // use to setInterval without delay first
   function setIntervalImmediately(func, interval) {
@@ -48,6 +55,29 @@ export default function QRScanScreen({ navigation }) {
       setCameraPermission(cameraPermission.granted);
     })();
   }, []);
+
+  // check barcode camera permission on startup
+  useEffect(() => {
+    const getBarCodeScannerPermissions = async () => {
+      const { status } = await BarCodeScanner.requestPermissionsAsync();
+      setHasPermission(status === 'granted');
+    };
+
+    getBarCodeScannerPermissions();
+  }, []);
+
+  const handleBarCodeScanned = ({ type, data }) => {
+    setScanned(true);
+    setType(type)
+    setData(data)
+  };
+
+  if (hasPermission === null) {
+    return <Text>Requesting for camera permission</Text>;
+  }
+  if (hasPermission === false) {
+    return <Text>No access to camera</Text>;
+  }
 
   // check face detection
   function checkForFace(obj) {
@@ -122,7 +152,7 @@ export default function QRScanScreen({ navigation }) {
           style={{ flex: 4 }}
         />
       )}
-      <View style={styles.imagePreview}>
+      {/* <View style={styles.imagePreview}>
         {!hasCameraPermission ? (
           <Text style={styles.cameraDenied}>
             Allow SmartAccess-Terminal to access camera
@@ -142,6 +172,15 @@ export default function QRScanScreen({ navigation }) {
             <View style={styles.imageOverlay} />
           </Camera>
         )}
+      </View> */}
+      <View style={styles.imagePreview}>
+        <BarCodeScanner
+          type={'front'}
+          onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
+          style={[{width: "100%"}, StyleSheet.absoluteFillObject]}
+        />
+        {/* {scanned && <Button title={'Tap to Scan Again'} onPress={() => setScanned(false)} />} */}
+        {scanned && <Text style={[{color: "white"}]} onPress={() => Linking.openURL(data)}>{data}</Text>}
       </View>
       <View style={styles.buttonContainer}>
         <View style={{ alignItems: "center" }}>
