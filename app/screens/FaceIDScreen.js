@@ -10,6 +10,8 @@ import {
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 
+import { useIsFocused } from "@react-navigation/native";
+
 import { Camera, CameraType } from "expo-camera";
 import * as FaceDetector from "expo-face-detector";
 
@@ -18,10 +20,11 @@ import { normalize } from "../utils/normalize";
 
 export default function FaceIDScreen({ navigation }) {
   let cameraRef = useRef();
+  const isFocused = useIsFocused();
   const cameraType = CameraType.front;
   const [dt, setDt] = useState(new Date().toLocaleString());
   const [hasCameraPermission, setCameraPermission] = useState();
-  const [faceDetected, setFaceDetected] = useState(false);
+  const [takePhoto, setTakePhoto] = useState(false);
   const [photo, setPhoto] = useState(null);
 
   // use to setInterval without delay first
@@ -49,42 +52,36 @@ export default function FaceIDScreen({ navigation }) {
     })();
   }, []);
 
-  // check face detection
-  function checkForFace(obj) {
-    try {
-      if (!faceDetected && obj.faces.length > 0) {
-        setFaceDetected(true);
-        setTimeout(() => {
-          takePic();
-        }, 1000);
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  }
-
-  async function takePic() {
-    const options = {
-      quality: 1,
-      base64: true,
-      exif: false,
-    };
-    await cameraRef.current
-      .takePictureAsync(options)
-      .then((photo) => {
-        setPhoto(photo);
-        sendPhoto(photo);
-      })
-      .catch((error) => {
+  async function takePic(pic) {
+    if (!takePhoto && pic.faces.length > 0) {
+      const options = {
+        quality: 1,
+        base64: true,
+        exif: false,
+      };
+      try {
+        await cameraRef.current
+          .takePictureAsync(options)
+          .then((photo) => {
+            setTakePhoto(true);
+            setPhoto(photo);
+            sendPhoto(photo);
+          })
+          .catch((error) => {
+            console.log(error);
+          });
+      } catch (error) {
         console.log(error);
-      });
+      }
+    }
   }
 
   async function sendPhoto(photo) {
     console.log(photo.uri);
 
+    // for testing
     setTimeout(() => {
-      setFaceDetected(false);
+      setTakePhoto(false);
     }, 1000);
 
     // await axios
@@ -105,7 +102,7 @@ export default function FaceIDScreen({ navigation }) {
     //   })
     //   .catch((error) => {
     //     console.log(error);
-    //     setFaceDetected(false);
+    //     setTakePhoto(false);
     //   });
   }
 
@@ -128,23 +125,26 @@ export default function FaceIDScreen({ navigation }) {
             Allow SmartAccess-Terminal to access camera
           </Text>
         ) : (
-          <Camera
-            ref={cameraRef}
-            style={{ flex: 1 }}
-            type={cameraType}
-            onFacesDetected={(e) => checkForFace(e)}
-            faceDetectorSettings={{
-              mode: FaceDetector.FaceDetectorMode.accurate,
-              minDetectionInterval: 500,
-              tracking: true,
-            }}
-          >
-            <Image
-              resizeMode="contain"
+          isFocused && (
+            <Camera
+              ref={cameraRef}
               style={{ flex: 1 }}
-              source={require("../assets/face-outline.png")}
-            />
-          </Camera>
+              type={cameraType}
+              resizeMode="cover"
+              ratio="9:16"
+              onFacesDetected={(e) => takePic(e)}
+              faceDetectorSettings={{
+                mode: FaceDetector.FaceDetectorMode.accurate,
+                minDetectionInterval: 500,
+              }}
+            >
+              <Image
+                resizeMode="contain"
+                style={{ flex: 1 }}
+                source={require("../assets/face-outline.png")}
+              />
+            </Camera>
+          )
         )}
       </View>
       <View style={styles.buttonContainer}>

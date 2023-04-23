@@ -21,7 +21,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./app/assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "softwareKeyboardLayoutMode": "pan"
     },
     "web": {
       "favicon": "./app/assets/favicon.png"
@@ -31,13 +32,6 @@
         "expo-camera",
         {
           "cameraPermission": "Allow SmartAccess-Terminal to access your camera."
-        }
-      ]
-      ,
-      [
-        "expo-barcode-scanner",
-        {
-          "cameraPermission": "Allow SmartAccess-Terminal to access camera."
         }
       ]
     ]

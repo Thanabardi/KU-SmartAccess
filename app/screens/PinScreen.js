@@ -6,6 +6,8 @@ import {
   View,
   Image,
   TouchableOpacity,
+  TextInput,
+  Alert,
 } from "react-native";
 import { useState, useEffect } from "react";
 import axios from "axios";
@@ -15,7 +17,7 @@ import { normalize } from "../utils/normalize";
 
 export default function PinScreen({ navigation }) {
   const [dt, setDt] = useState(new Date().toLocaleString());
-  const [password, setPassword] = useState({});
+  const [password, setPassword] = useState("");
 
   // use to setInterval without delay first
   function setIntervalImmediately(func, interval) {
@@ -34,12 +36,37 @@ export default function PinScreen({ navigation }) {
     };
   }, []);
 
+  function onSubmit() {
+    Alert.alert("Error", "Incorrect Password", [
+      { text: "OK", onPress: () => console.log("OK Pressed") },
+    ]);
+    setPassword("");
+    console.log(password);
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerText}>Password</Text>
       </View>
-      <View style={styles.inputField}></View>
+      {/* <View style={styles.inputField}></View> */}
+      <View style={{ flex: 8, justifyContent: "center" }}>
+        <View style={styles.input}>
+          <TextInput
+            style={styles.inputField}
+            onChangeText={setPassword}
+            onSubmitEditing={() => onSubmit()}
+            value={password}
+            placeholder="Password"
+          />
+          <TouchableOpacity
+            style={styles.submitButton}
+            onPress={() => onSubmit()}
+          >
+            <Text style={styles.buttonLabel}>Confirm</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
       <View style={styles.buttonContainer}>
         <View style={{ alignItems: "center" }}>
           <TouchableOpacity
@@ -65,7 +92,7 @@ export default function PinScreen({ navigation }) {
               source={require("../assets/face-scan-icon.png")}
             />
           </TouchableOpacity>
-          <Text style={styles.buttonLabel}>Password</Text>
+          <Text style={styles.buttonLabel}>Face ID Scan</Text>
         </View>
       </View>
       <View style={styles.footer}>
@@ -95,12 +122,30 @@ const styles = StyleSheet.create({
     fontSize: normalize(5),
     fontWeight: 600,
   },
-  inputField: {
-    flex: 8,
+  input: {
+    height: "45%",
     backgroundColor: colors.gray,
-    borderRadius: 10,
+    borderRadius: normalize(1.5),
+    padding: 10,
     margin: normalize(3),
-    marginBottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  inputField: {
+    flex: 1,
+    fontSize: normalize(2.5),
+    width: "100%",
+    backgroundColor: colors.white,
+    borderRadius: normalize(1.5),
+    paddingHorizontal: 10,
+    marginBottom: normalize(1),
+  },
+  submitButton: {
+    flex: 1,
+    width: "100%",
+    backgroundColor: colors.pin,
+    borderRadius: normalize(1.5),
+    marginTop: 10,
     alignItems: "center",
     justifyContent: "center",
   },

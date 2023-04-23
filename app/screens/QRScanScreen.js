@@ -6,30 +6,25 @@ import {
   View,
   Image,
   TouchableOpacity,
-  Button,
-  Linking 
 } from "react-native";
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
+
+import { useIsFocused } from "@react-navigation/native";
 
 import { Camera, CameraType } from "expo-camera";
 import * as FaceDetector from "expo-face-detector";
 
 import colors from "../config/colors";
 import { normalize } from "../utils/normalize";
-import { BarCodeScanner } from 'expo-barcode-scanner';
 
 export default function QRScanScreen({ navigation }) {
   let cameraRef = useRef();
+  const isFocused = useIsFocused();
   const cameraType = CameraType.front;
   const [dt, setDt] = useState(new Date().toLocaleString());
   const [hasCameraPermission, setCameraPermission] = useState();
-  const [faceDetected, setFaceDetected] = useState(false);
-  const [photo, setPhoto] = useState(null);
-  const [hasPermission, setHasPermission] = useState(null);
-  const [scanned, setScanned] = useState(false);
-  const [data, setData] = useState("")
-  const [type, setType] = useState("")
+  const [isScanned, setIsScanned] = useState(false);
 
   // use to setInterval without delay first
   function setIntervalImmediately(func, interval) {
@@ -56,131 +51,65 @@ export default function QRScanScreen({ navigation }) {
     })();
   }, []);
 
-  // check barcode camera permission on startup
-  useEffect(() => {
-    const getBarCodeScannerPermissions = async () => {
-      const { status } = await BarCodeScanner.requestPermissionsAsync();
-      setHasPermission(status === 'granted');
-    };
-
-    getBarCodeScannerPermissions();
-  }, []);
-
-  const handleBarCodeScanned = ({ type, data }) => {
-    setScanned(true);
-    setType(type)
-    setData(data)
-  };
-
-  if (hasPermission === null) {
-    return <Text>Requesting for camera permission</Text>;
-  }
-  if (hasPermission === false) {
-    return <Text>No access to camera</Text>;
-  }
-
-  // check face detection
-  function checkForFace(obj) {
-    try {
-      if (!faceDetected && obj.faces.length > 0) {
-        setFaceDetected(true);
-        setTimeout(() => {
-          takePic();
-        }, 1000);
-      }
-    } catch (error) {
-      console.log(error);
+  async function sendCode(barCodeResult) {
+    if (!isScanned) {
+      console.log(barCodeResult);
+      setIsScanned(true);
+      setTimeout(() => {
+        setIsScanned(false);
+      }, 1000);
+      // await axios
+      //   .post(
+      //     `path`,
+      //     {
+      //       image: photo.uri,
+      //       door: "1",
+      //     },
+      //     {
+      //       headers: {
+      //         "content-type": "multipart/form-data",
+      //       },
+      //     }
+      //   )
+      //   .then((response) => {
+      //     console.log(response);
+      //   })
+      //   .catch((error) => {
+      //     console.log(error);
+      //     setFaceDetected(false);
+      //   });
     }
-  };
-
-  async function takePic() {
-    const options = {
-      quality: 1,
-      base64: true,
-      exif: false,
-    };
-    await cameraRef.current
-      .takePictureAsync(options)
-      .then((photo) => {
-        setPhoto(photo);
-        sendPhoto(photo);
-      })
-      .catch((error) => {
-        console.log(error);
-      });
   }
-
-  async function sendPhoto(photo) {
-    console.log(photo.uri);
-
-    setTimeout(() => {
-      setFaceDetected(false);
-    }, 1000);
-
-    // await axios
-    //   .post(
-    //     `path`,
-    //     {
-    //       image: photo.uri,
-    //       door: "1",
-    //     },
-    //     {
-    //       headers: {
-    //         "content-type": "multipart/form-data",
-    //       },
-    //     }
-    //   )
-    //   .then((response) => {
-    //     console.log(response);
-    //   })
-    //   .catch((error) => {
-    //     console.log(error);
-    //     setFaceDetected(false);
-    //   });
-  }
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerText}>QR Code Scan</Text>
       </View>
-      {/* for testing */}
-      {photo && (
-        <Image
-          resizeMode="contain"
-          source={{ uri: photo.uri }}
-          style={{ flex: 4 }}
-        />
-      )}
-      {/* <View style={styles.imagePreview}>
+      <View style={styles.imagePreview}>
         {!hasCameraPermission ? (
           <Text style={styles.cameraDenied}>
             Allow SmartAccess-Terminal to access camera
           </Text>
         ) : (
-          <Camera
-            ref={cameraRef}
-            style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
-            type={cameraType}
-            onFacesDetected={(e) => checkForFace(e)}
-            faceDetectorSettings={{
-              mode: FaceDetector.FaceDetectorMode.accurate,
-              minDetectionInterval: 500,
-              tracking: true,
-            }}
-          >
-            <View style={styles.imageOverlay} />
-          </Camera>
+          isFocused && (
+            <Camera
+              ref={cameraRef}
+              style={{
+                flex: 1,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+              type={cameraType}
+              onBarCodeScanned={(result) => sendCode(result.data)}
+            >
+              <View style={{ flexDirection: "row" }}>
+                <View style={{ flex: 1 }} />
+                <View style={styles.imageOverlay} />
+                <View style={{ flex: 1 }} />
+              </View>
+            </Camera>
+          )
         )}
-      </View> */}
-      <View style={styles.imagePreview}>
-        <BarCodeScanner
-          type={'front'}
-          onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
-          style={[{width: "100%"}, StyleSheet.absoluteFillObject]}
-        />
-        {/* {scanned && <Button title={'Tap to Scan Again'} onPress={() => setScanned(false)} />} */}
-        {scanned && <Text style={[{color: "white"}]} onPress={() => Linking.openURL(data)}>{data}</Text>}
       </View>
       <View style={styles.buttonContainer}>
         <View style={{ alignItems: "center" }}>
@@ -217,7 +146,6 @@ export default function QRScanScreen({ navigation }) {
     </SafeAreaView>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -247,7 +175,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   imageOverlay: {
-    height: "60%",
+    flex: 3,
     aspectRatio: 1 / 1,
     borderColor: "red",
     borderWidth: normalize(1),
