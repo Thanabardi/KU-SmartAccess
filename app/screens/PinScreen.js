@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
   headerText: {
     color: colors.white,
     fontSize: normalize(5),
-    fontWeight: 600,
+    fontWeight: "600",
   },
   input: {
     height: "45%",
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
   },
   buttonLabel: {
     fontSize: normalize(3),
-    fontWeight: 500,
+    fontWeight: "500",
   },
   footer: {
     flex: 1,
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
   footerText: {
     color: colors.white,
     fontSize: normalize(3),
-    fontWeight: 500,
+    fontWeight: "500",
     marginLeft: 20,
     marginRight: 20,
   },

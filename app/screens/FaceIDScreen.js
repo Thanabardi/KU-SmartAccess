@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
   headerText: {
     color: colors.white,
     fontSize: normalize(5),
-    fontWeight: 600,
+    fontWeight: "600",
   },
   imagePreview: {
     flex: 8,
@@ -210,6 +210,7 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     alignItems: "center",
     justifyContent: "center",
+    aspectRatio: 8/5
   },
   cameraDenied: {
     fontSize: normalize(2),
@@ -230,7 +231,7 @@ const styles = StyleSheet.create({
   },
   buttonLabel: {
     fontSize: normalize(3),
-    fontWeight: 500,
+    fontWeight: "500",
   },
   footer: {
     flex: 1,
@@ -242,7 +243,7 @@ const styles = StyleSheet.create({
   footerText: {
     color: colors.white,
     fontSize: normalize(3),
-    fontWeight: 500,
+    fontWeight: "500",
     marginLeft: 20,
     marginRight: 20,
   },

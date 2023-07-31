@@ -1,3 +1,5 @@
+global.Buffer = global.Buffer || require('buffer').Buffer;
+
 import {
   SafeAreaView,
   StatusBar,
@@ -13,10 +15,13 @@ import axios from "axios";
 import { useIsFocused } from "@react-navigation/native";
 
 import { Camera, CameraType } from "expo-camera";
-import * as FaceDetector from "expo-face-detector";
 
 import colors from "../config/colors";
 import { normalize } from "../utils/normalize";
+import stringToHex from "../utils/stringToHex"
+
+import { totpToken, totpOptions } from '@otplib/core';
+import { createDigest } from '@otplib/plugin-crypto-js';
 
 export default function QRScanScreen({ navigation }) {
   let cameraRef = useRef();
@@ -25,7 +30,10 @@ export default function QRScanScreen({ navigation }) {
   const [dt, setDt] = useState(new Date().toLocaleString());
   const [hasCameraPermission, setCameraPermission] = useState();
   const [isScanned, setIsScanned] = useState(false);
+  const [totpKey, setTotpToken] = useState('')
 
+  // Wait for implement secret import
+  let secret = "TOTPSECRET"
   // use to setInterval without delay first
   function setIntervalImmediately(func, interval) {
     func();
@@ -50,6 +58,25 @@ export default function QRScanScreen({ navigation }) {
       setCameraPermission(cameraPermission.granted);
     })();
   }, []);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      const secretHex = stringToHex(secret)
+
+      const totp = totpToken(
+        secretHex,
+        totpOptions({
+          createDigest,
+        }),
+      );
+
+      setTotpToken(totp);
+    }, 1000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [secret]);
 
   async function sendCode(barCodeResult) {
     if (!isScanned) {
@@ -84,6 +111,10 @@ export default function QRScanScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerText}>QR Code Scan</Text>
+      </View>
+      <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ fontSize: 24, marginBottom: 20 }}>TOTP Code:</Text>
+        <Text style={{ fontSize: 24 }}>{totpKey}</Text>
       </View>
       <View style={styles.imagePreview}>
         {!hasCameraPermission ? (
@@ -163,7 +194,7 @@ const styles = StyleSheet.create({
   headerText: {
     color: colors.white,
     fontSize: normalize(5),
-    fontWeight: 600,
+    fontWeight: "600",
   },
   imagePreview: {
     flex: 8,
@@ -201,7 +232,7 @@ const styles = StyleSheet.create({
   },
   buttonLabel: {
     fontSize: normalize(3),
-    fontWeight: 500,
+    fontWeight: "500",
   },
   footer: {
     flex: 1,
@@ -213,7 +244,7 @@ const styles = StyleSheet.create({
   footerText: {
     color: colors.white,
     fontSize: normalize(3),
-    fontWeight: 500,
+    fontWeight: "500",
     marginLeft: 20,
     marginRight: 20,
   },
