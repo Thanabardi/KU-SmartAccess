@@ -1,9 +1,10 @@
 export default {
   black: "#000",
-  gray: "#E7E7E7",
-  darkGray: "#2D2D2D",
   white: "#fff",
-  faceID: "#B9384C",
-  QRScan: "#226E64",
-  pin: "#FDCC56",
+  gray: "#E7E7E7",
+  darkGray: "#393939",
+  blue: "#397DE3",
+  yellow: "#FFC029",
+  red: "#FF004D",
+  green: "#00CB6A",
 };
