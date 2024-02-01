@@ -19,7 +19,7 @@ import colors from "../config/colors";
 import { normalize } from "../utils/normalize";
 
 import Header from "../components/Header";
-import ServerStatus from "../components/ServerStatus";
+import CheckStatus from "../components/CheckStatus";
 
 export default function FaceIDScreen({ navigation }) {
   let cameraRef = useRef();
@@ -173,7 +173,7 @@ export default function FaceIDScreen({ navigation }) {
         Title="Face & QR Code"
       />
       {CameraPreviewUI()}
-      <ServerStatus onServerError={setIsServerError} />
+      <CheckStatus onServerError={setIsServerError} />
       <Text style={styles.progressText}>{progressText}</Text>
       {/* {ResultUI()} */}
     </SafeAreaView>

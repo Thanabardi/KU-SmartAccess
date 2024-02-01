@@ -15,7 +15,7 @@ import colors from "../config/colors";
 import { normalize } from "../utils/normalize";
 
 import Header from "../components/Header";
-import ServerStatus from "../components/ServerStatus";
+import CheckStatus from "../components/CheckStatus";
 
 export default function PasswordScreen({ navigation }) {
   const [isServerError, setIsServerError] = useState(false);
@@ -59,7 +59,7 @@ export default function PasswordScreen({ navigation }) {
         Title="Password"
       />
       {inputFiledUI()}
-      <ServerStatus onServerError={setIsServerError} />
+      <CheckStatus onServerError={setIsServerError} />
     </SafeAreaView>
   );
 }

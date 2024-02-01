@@ -2,8 +2,6 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import FaceQRScreen from "./app/screens/FaceQRScreen";
-import FaceIDScreen from "./app/screens/FaceIDScreen";
-import QRScanScreen from "./app/screens/QRScanScreen";
 import PasswordScreen from "./app/screens/PasswordScreen";
 import Footer from "./app/components/Footer";
 

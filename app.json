@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "SmartAccessTerminal",
-    "slug": "SmartAccessTerminal",
+    "name": "smartaccess-terminal",
+    "slug": "smartaccess-terminal",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./app/assets/icon.png",
@@ -22,7 +22,15 @@
         "foregroundImage": "./app/assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "softwareKeyboardLayoutMode": "pan"
+      "softwareKeyboardLayoutMode": "pan",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_CONNECT"
+      ],
+      "package": "com.kusmartaccess.terminal"
     },
     "web": {
       "favicon": "./app/assets/favicon.png"
@@ -31,7 +39,18 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow SmartAccess-Terminal to access your camera."
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera."
+        }
+      ],
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": true,
+          "modes": [
+            "peripheral",
+            "central"
+          ],
+          "bluetoothAlwaysPermission": "Allow $(PRODUCT_NAME) to connect to bluetooth devices"
         }
       ]
     ]
