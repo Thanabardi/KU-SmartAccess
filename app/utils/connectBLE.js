@@ -7,11 +7,12 @@ import * as ExpoDevice from "expo-device";
 import base64 from "react-native-base64";
 
 const DOOR_CONTROLLER_DEVICE_ID = "";
-const DOOR_CONTROLLER_UUID = "";
-const DOOR_CONTROLLER_CHARACTERISTIC = "";
+const DOOR_CONTROLLER_UUID = "1E200001-B4A5-F678-E9A0-E12E34DCCA5E";
+const DOOR_CONTROLLER_CHARACTERISTIC = "1E200003-B4A5-F678-E9A0-E12E34DCCA5E";
 
 export function connectBLE() {
   const bleManager = useMemo(() => new BleManager(), []);
+  const [allDevices, setAllDevices] = useState(null);
   const [connectedDevice, setConnectedDevice] = useState(null);
 
   async function requestAndroid31Permissions() {
@@ -67,17 +68,57 @@ export function connectBLE() {
     }
   }
 
+  // function isDuplicateDevice(devices, nextDevice){
+  //   return devices.findIndex(device => nextDevice.id === device.id) > -1;
+  // } 
+
+  // function scanForPeripherals(){
+  //   bleManager.startDeviceScan(null, null, (error, device) => {
+  //     if (error) {
+  //       console.log(error)
+  //     }
+  //     if (device && device.name?.includes("DoorController")){
+  //       setAllDevices((prevState) => {
+  //         if (!isDuplicateDevice(prevState, device)){
+  //             return [...prevState, device]
+  //         }
+  //         return prevState
+  //       })
+  //     }
+  //   })
+  // }
+
   async function connectBLEDevice() {
-    try {
-      const deviceConnection = await bleManager.connectToDevice(
-        DOOR_CONTROLLER_DEVICE_ID
-      );
-      setConnectedDevice(deviceConnection);
-      await deviceConnection.discoverAllServicesAndCharacteristics();
-      startStreamingData(deviceConnection);
-    } catch (error) {
-      console.log("Failed to connect BLE device", error);
-    }
+    bleManager.startDeviceScan(null, null, (error, device) => {
+      console.log("Scaning... " + device);
+
+      if (error) {
+        console.log(error.message);
+      }
+
+      if (device.name ==='DoorController') {
+        console.log("Starting connection with DoorController");
+        bleManager.stopDeviceScan();
+
+        device.connect()
+          .then((device) => {
+            console.log("Discovering services and characteristics");
+            setConnectedDevice(device.name)
+            return device.discoverAllServicesAndCharacteristics()
+          })
+          .then((device) => {
+            console.log(device.id);
+            device.writeCharacteristicWithResponseForService('1E200001-B4A5-F678-E9A0-E12E34DCCA5E', '1E200003-B4A5-F678-E9A0-E12E34DCCA5E', 'aGVsbG8gbWlzcyB0YXBweQ==')
+              .then((characteristic) => {
+                console.log(characteristic.value);
+       
+              })
+          })
+          .catch((error) => {
+            console.log(error.message)
+          })
+       }
+      });
   }
 
   function disconnectBLEDevice() {
@@ -116,5 +157,6 @@ export function connectBLE() {
     requestPermissions,
     connectBLEDevice,
     connectedDevice,
+    // scanForPeripherals,
   };
 }
