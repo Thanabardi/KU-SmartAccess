@@ -19,16 +19,17 @@ import colors from "../config/colors";
 import { normalize } from "../utils/normalize";
 
 import Header from "../components/Header";
-import CheckStatus from "../components/CheckStatus";
+import Status from "../components/Status";
+import { useAppContext } from "../contex/AppContex";
 
 export default function FaceIDScreen({ navigation }) {
+  const { appContex } = useAppContext();
   let cameraRef = useRef();
-  const statusColor = useRef(new Animated.Value(0)).current;
+  const resultColor = useRef(new Animated.Value(0)).current;
   const isFocused = useIsFocused();
   const cameraType = CameraType.front;
 
   const [progressText, setProgressText] = useState();
-  const [isServerError, setIsServerError] = useState(false);
   const [hasCameraPermission, setCameraPermission] = useState();
   const [hastakePhoto, setHasTakePhoto] = useState(false);
   const [photo, setPhoto] = useState(null);
@@ -128,9 +129,9 @@ export default function FaceIDScreen({ navigation }) {
               <Image
                 style={styles.cameraOverlay}
                 source={
-                  isServerError
-                    ? require("../assets/qr-outline.png")
-                    : require("../assets/face-qr-outline.png")
+                  appContex.isConnectedServer
+                    ? require("../assets/face-qr-outline.png")
+                    : require("../assets/qr-outline.png")
                 }
               />
             </Camera>
@@ -173,7 +174,7 @@ export default function FaceIDScreen({ navigation }) {
         Title="Face & QR Code"
       />
       {CameraPreviewUI()}
-      <CheckStatus onServerError={setIsServerError} />
+      <Status />
       <Text style={styles.progressText}>{progressText}</Text>
       {/* {ResultUI()} */}
     </SafeAreaView>

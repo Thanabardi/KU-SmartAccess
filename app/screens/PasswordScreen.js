@@ -8,17 +8,16 @@ import {
   TextInput,
   Alert,
 } from "react-native";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import axios from "axios";
 
 import colors from "../config/colors";
 import { normalize } from "../utils/normalize";
 
 import Header from "../components/Header";
-import CheckStatus from "../components/CheckStatus";
+import Status from "../components/Status";
 
 export default function PasswordScreen({ navigation }) {
-  const [isServerError, setIsServerError] = useState(false);
   const [password, setPassword] = useState("");
 
   function onSubmit() {
@@ -59,7 +58,7 @@ export default function PasswordScreen({ navigation }) {
         Title="Password"
       />
       {inputFiledUI()}
-      <CheckStatus onServerError={setIsServerError} />
+      <Status />
     </SafeAreaView>
   );
 }
