@@ -5,14 +5,23 @@
 
 BLEServer *pServer = NULL;
 BLECharacteristic *pCharacteristic;
+BLECharacteristic *pRxCharacteristic;
 bool deviceConnected = false;
 bool oldDeviceConnected = false;
 int txValue = 0;
 
 #define SERVICE_UUID "1E200001-B4A5-F678-E9A0-E12E34DCCA5E"
+#define CHARACTERISTIC_UUID_RX "1E200002-B4A5-F678-E9A0-E12E34DCCA5E"
 #define CHARACTERISTIC_UUID_TX "1E200003-B4A5-F678-E9A0-E12E34DCCA5E"
 
 BLECharacteristic doorCharacteristic(
+    BLEUUID((uint16_t)0x2A6E),
+    BLECharacteristic::PROPERTY_READ |
+        BLECharacteristic::PROPERTY_NOTIFY |
+        BLECharacteristic::PROPERTY_WRITE
+);
+
+BLECharacteristic clientCharacteristic(
     BLEUUID((uint16_t)0x2A6E),
     BLECharacteristic::PROPERTY_READ |
         BLECharacteristic::PROPERTY_NOTIFY |
@@ -63,11 +72,20 @@ void setup() {
       CHARACTERISTIC_UUID_TX,
       BLECharacteristic::PROPERTY_READ |
           BLECharacteristic::PROPERTY_NOTIFY |
-          BLECharacteristic::PROPERTY_WRITE);
+          BLECharacteristic::PROPERTY_WRITE
+  );
   pService->addCharacteristic(&doorCharacteristic);
 
   // BLE2902 needed to notify
   doorCharacteristic.addDescriptor(new BLE2902());
+
+  // receive notify
+  pRxCharacteristic = pService->createCharacteristic(
+      CHARACTERISTIC_UUID_RX,
+      BLECharacteristic::PROPERTY_READ |
+          BLECharacteristic::PROPERTY_NOTIFY |
+          BLECharacteristic::PROPERTY_WRITE
+  );
 
   pServer->getAdvertising()->addServiceUUID(pService->getUUID());
 
@@ -94,8 +112,15 @@ void loop() {
 
     // notify
     pCharacteristic->notify();
-    Serial.println("Send value: " + String(txString));
-    Serial.println("Device: " + String(deviceConnected));
+    Serial.println("Send value: " + String(txString) + "\n");
+    Serial.println("Device: " + String(deviceConnected) + "\n");
+
+    // read message
+    std::string value = pRxCharacteristic->getValue().c_str();
+    if (!value.empty()) {
+      Serial.print("Received: " + String(value.c_str()));
+    }
+
     delay(500);
   }
 }
