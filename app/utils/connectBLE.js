@@ -11,9 +11,10 @@ const DOOR_CONTROLLER_UUID = "1E200001-B4A5-F678-E9A0-E12E34DCCA5E";
 const DOOR_CONTROLLER_CHARACTERISTIC = "1E200003-B4A5-F678-E9A0-E12E34DCCA5E";
 
 export function connectBLE() {
-  const bleManager = useMemo(() => new BleManager(), []);
   const [allDevices, setAllDevices] = useState(null);
+  const [isConnected, setIsConnected] = useState(false);
   const [connectedDevice, setConnectedDevice] = useState(null);
+  const [readValue, setReadValue] = useState(null);
 
   async function requestAndroid31Permissions() {
     const bluetoothScanPermission = await PermissionsAndroid.request(
@@ -88,37 +89,50 @@ export function connectBLE() {
   //   })
   // }
 
-  async function connectBLEDevice() {
-    bleManager.startDeviceScan(null, null, (error, device) => {
-      console.log("Scaning... " + device);
+  async function connectBLEDevice(bleManager, isConnect) {
+    setIsConnected(isConnect)
+    if (!isConnected){
+      bleManager.startDeviceScan(null, null, (error, device) => {
+        console.log("Scaning... " + device);
 
-      if (error) {
-        console.log(error.message);
+        if (error) {
+          console.log(error.message);
+        }
+
+        if (device?.name ==='DoorController') {
+          console.log("Starting connection with DoorController");
+          bleManager.stopDeviceScan();
+
+          bleManager.connectToDevice(device.id, {autoConnect:true})
+            .then(async (device) => {
+              console.log(device.name)
+              console.log("Discovering services and characteristics");
+              setIsConnected(true);
+              setConnectedDevice(device.name)
+              // console.log(device)
+              await device.discoverAllServicesAndCharacteristics()
+              // await device.discoverAllServicesAndCharacteristics();
+              const services = await device.services();
+              services.forEach(async service => {
+                const characteristics = await device.characteristicsForService(service.uuid);
+                // console.log(characteristics)
+                // characteristics.forEach(console.log);
+              });
+              // await readCharacteristicForService(device)
+              // await writeCharacteristicForService(device)
+              // console.log(await getServicesAndCharacteristics(device))
+              device.onDisconnected((error, disconnectedDevice) => {
+                console.log('Disconnected ', disconnectedDevice.name);
+                setIsConnected(false)
+              return device
+            });      
+            })
+            .catch((error) => {
+              console.log(error.message)
+            })
+        }
+        });
       }
-
-      if (device.name ==='DoorController') {
-        console.log("Starting connection with DoorController");
-        bleManager.stopDeviceScan();
-
-        device.connect()
-          .then((device) => {
-            console.log("Discovering services and characteristics");
-            setConnectedDevice(device.name)
-            return device.discoverAllServicesAndCharacteristics()
-          })
-          .then((device) => {
-            console.log(device.id);
-            device.writeCharacteristicWithResponseForService('1E200001-B4A5-F678-E9A0-E12E34DCCA5E', '1E200003-B4A5-F678-E9A0-E12E34DCCA5E', 'aGVsbG8gbWlzcyB0YXBweQ==')
-              .then((characteristic) => {
-                console.log(characteristic.value);
-       
-              })
-          })
-          .catch((error) => {
-            console.log(error.message)
-          })
-       }
-      });
   }
 
   function disconnectBLEDevice() {
@@ -153,10 +167,28 @@ export function connectBLE() {
     console.log(rawData);
   }
 
+  async function readCharacteristicForService(device){
+    await device.readCharacteristicForService('1E200001-B4A5-F678-E9A0-E12E34DCCA5E', '1E200003-B4A5-F678-E9A0-E12E34DCCA5E')
+    .then(valenc => {
+      console.log(base64.decode(valenc?.value));
+      setReadValue(base64.decode(valenc?.value))
+    });
+  }
+
+  async function writeCharacteristicForService(device){
+    await device.writeCharacteristicWithResponseForService('1E200001-B4A5-F678-E9A0-E12E34DCCA5E', '1E200002-B4A5-F678-E9A0-E12E34DCCA5E', 'aGVsbG8gbWlzcyB0YXBweQ==')
+    .then((characteristic) => {
+      console.log("Write message: ", characteristic.value);
+    })
+  }
+
   return {
     requestPermissions,
     connectBLEDevice,
     connectedDevice,
+    readCharacteristicForService,
+    writeCharacteristicForService,
+    // blueToothState,
     // scanForPeripherals,
   };
 }

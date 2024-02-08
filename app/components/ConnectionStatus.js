@@ -1,24 +1,40 @@
-import { useEffect, useRef, useState } from "react";
+import { useMemo, useEffect, useRef, useState, useContext } from "react";
 import * as SecureStore from "expo-secure-store";
 import { AppState } from "react-native";
 
 import { connectBLE } from "../utils/connectBLE";
 import { useAppContext } from "../contex/AppContex";
+import { BleManager } from "react-native-ble-plx"
+import { DeviceContext } from "../../App"
 
 export default function ConnectionStatus() {
+  var isConnect;
   const { contexMethods } = useAppContext();
-  const { requestPermissions, connectBLEDevice, connectedDevice } = connectBLE();
+  const { requestPermissions, connectBLEDevice, connectedDevice, readValue, readCharacteristicForService } = connectBLE();
   const [participants, setParticipants] = useState([]);
   const appState = useRef(AppState.currentState);
+  const bleManager = useMemo(() => new BleManager(), []);
+  const [bleState, setBleState] = useState();
+  const [device, setDevice] = useContext(DeviceContext)
 
   useEffect(() => {
+    bleManager.onStateChange((state) => {
+      setBleState(state)
+      if (state === 'PoweredOff'){
+        isConnect = false
+      } else if (state == 'PoweredOn') {
+        setDevice(connectDoorController(bleManager, isConnect));
+      }
+    })
+
+    console.log("state: ", bleState)
     const subscription = AppState.addEventListener("change", (nextAppState) => {
       if (
         appState.current.match(/inactive|background/) &&
         nextAppState === "active"
       ) {
         // check door and server status on awake
-        connectDoorController();
+        setDevice(connectDoorController(bleManager, isConnect));
         getUserList();
       }
       appState.current = nextAppState;
@@ -27,9 +43,9 @@ export default function ConnectionStatus() {
     return () => {
       subscription.remove();
     };
-  }, []);
+  }, [bleState, readValue]);
 
-  async function connectDoorController() {
+  async function connectDoorController(bleManager, isConnect) {
     contexMethods.addOrReplaceContex(
       "isConnectedDevice",
       connectedDevice != null
@@ -39,7 +55,7 @@ export default function ConnectionStatus() {
     }
     const isPermissionsEnabled = await requestPermissions();
     if (isPermissionsEnabled) {
-      connectBLEDevice();
+      return connectBLEDevice(bleManager, isConnect);
     }
   }
 
