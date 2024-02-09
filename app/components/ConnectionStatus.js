@@ -5,7 +5,6 @@ import { AppState } from "react-native";
 import { connectBLE } from "../utils/connectBLE";
 import { useAppContext } from "../contex/AppContex";
 import { BleManager } from "react-native-ble-plx"
-import { DeviceContext } from "../../App"
 
 export default function ConnectionStatus() {
   var isConnect;
@@ -15,7 +14,6 @@ export default function ConnectionStatus() {
   const appState = useRef(AppState.currentState);
   const bleManager = useMemo(() => new BleManager(), []);
   const [bleState, setBleState] = useState();
-  const [device, setDevice] = useContext(DeviceContext)
 
   useEffect(() => {
     bleManager.onStateChange((state) => {
@@ -23,7 +21,7 @@ export default function ConnectionStatus() {
       if (state === 'PoweredOff'){
         isConnect = false
       } else if (state == 'PoweredOn') {
-        setDevice(connectDoorController(bleManager, isConnect));
+        connectDoorController(bleManager, isConnect);
       }
     })
 
@@ -34,7 +32,7 @@ export default function ConnectionStatus() {
         nextAppState === "active"
       ) {
         // check door and server status on awake
-        setDevice(connectDoorController(bleManager, isConnect));
+        connectDoorController(bleManager, isConnect);
         getUserList();
       }
       appState.current = nextAppState;

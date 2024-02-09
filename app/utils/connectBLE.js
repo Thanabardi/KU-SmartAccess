@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useContext } from "react";
 import { PermissionsAndroid, Platform } from "react-native";
-import { BleManager } from "react-native-ble-plx";
+import { DeviceContext} from "../../App"
 
 import * as ExpoDevice from "expo-device";
 
@@ -15,6 +15,7 @@ export function connectBLE() {
   const [isConnected, setIsConnected] = useState(false);
   const [connectedDevice, setConnectedDevice] = useState(null);
   const [readValue, setReadValue] = useState(null);
+  const [device, setDevice] = useContext(DeviceContext)
 
   async function requestAndroid31Permissions() {
     const bluetoothScanPermission = await PermissionsAndroid.request(
@@ -118,6 +119,7 @@ export function connectBLE() {
                 // console.log(characteristics)
                 // characteristics.forEach(console.log);
               });
+              setDevice(await device)
               // await readCharacteristicForService(device)
               // await writeCharacteristicForService(device)
               // console.log(await getServicesAndCharacteristics(device))

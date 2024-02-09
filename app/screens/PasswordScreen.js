@@ -8,7 +8,7 @@ import {
   TextInput,
   Alert,
 } from "react-native";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import axios from "axios";
 
 import colors from "../config/colors";
@@ -16,16 +16,22 @@ import { normalize } from "../utils/normalize";
 
 import Header from "../components/Header";
 import Status from "../components/Status";
+import { DeviceContext } from "../../App"
+import { connectBLE } from "../utils/connectBLE"
 
 export default function PasswordScreen({ navigation }) {
   const [password, setPassword] = useState("");
+  const [device, setDevice] = useContext(DeviceContext);
+  const { readCharacteristicForService, writeCharacteristicForService } = connectBLE();
 
-  function onSubmit() {
+
+  async function onSubmit() {
     Alert.alert("Access Denied", "Incorrect Password", [
       { text: "OK", onPress: () => console.log("OK Pressed") },
     ]);
     console.log(password);
     setPassword("");
+    writeCharacteristicForService(device)
   }
 
   function inputFiledUI() {
