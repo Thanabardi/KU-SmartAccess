@@ -177,8 +177,8 @@ export function connectBLE() {
     });
   }
 
-  async function writeCharacteristicForService(device){
-    await device.writeCharacteristicWithResponseForService('1E200001-B4A5-F678-E9A0-E12E34DCCA5E', '1E200002-B4A5-F678-E9A0-E12E34DCCA5E', 'aGVsbG8gbWlzcyB0YXBweQ==')
+  async function writeCharacteristicForService(device, message){
+    await device.writeCharacteristicWithResponseForService('1E200001-B4A5-F678-E9A0-E12E34DCCA5E', '1E200002-B4A5-F678-E9A0-E12E34DCCA5E', base64.encode(message))
     .then((characteristic) => {
       console.log("Write message: ", characteristic.value);
     })

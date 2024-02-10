@@ -31,7 +31,8 @@ export default function PasswordScreen({ navigation }) {
     ]);
     console.log(password);
     setPassword("");
-    writeCharacteristicForService(device)
+    writeCharacteristicForService(device, password)
+    readCharacteristicForService(device)
   }
 
   function inputFiledUI() {
