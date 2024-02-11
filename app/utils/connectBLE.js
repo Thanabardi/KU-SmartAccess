@@ -75,7 +75,7 @@ export function connectBLE() {
   // function scanForPeripherals(){
   //   bleManager.startDeviceScan(null, null, (error, device) => {
   //     if (error) {
-  //       console.log(error)
+  //       console.error(error)
   //     }
   //     if (device && device.name?.includes("DoorController")){
   //       setAllDevices((prevState) => {
@@ -90,10 +90,10 @@ export function connectBLE() {
 
   async function connectBLEDevice() {
     bleManager.startDeviceScan(null, null, (error, device) => {
-      console.log("Scaning... " + device);
+      // console.log("Scaning... " + device);
 
       if (error) {
-        console.log(error.message);
+        console.error(error);
       }
 
       if (device.name ==='DoorController') {
@@ -115,7 +115,7 @@ export function connectBLE() {
               })
           })
           .catch((error) => {
-            console.log(error.message)
+            console.error(error)
           })
        }
       });
@@ -142,7 +142,7 @@ export function connectBLE() {
 
   function onEventTrigger(error, characteristic) {
     if (error) {
-      console.log(error);
+      console.error(error);
       return -1;
     } else if (!characteristic?.value) {
       console.log("No data received from device");

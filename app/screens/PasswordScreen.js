@@ -8,7 +8,7 @@ import {
   TextInput,
   Alert,
 } from "react-native";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import axios from "axios";
 
 import colors from "../config/colors";
@@ -16,9 +16,23 @@ import { normalize } from "../utils/normalize";
 
 import Header from "../components/Header";
 import Status from "../components/Status";
+import { useFocusEffect } from "@react-navigation/native";
+import { retrieveData } from "../utils/saveLoadData";
 
 export default function PasswordScreen({ navigation }) {
   const [password, setPassword] = useState("");
+
+  // check app setting
+  useFocusEffect(
+    useCallback(() => {
+      async function getConfigData() {
+        if ((await retrieveData("config")) == null) {
+          navigation.navigate("ConfigScreen");
+        }
+      }
+      getConfigData();
+    }, [])
+  );
 
   function onSubmit() {
     Alert.alert("Access Denied", "Incorrect Password", [
@@ -72,10 +86,10 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     width: "80%",
-    height: "20%",
+    height: "16%",
     backgroundColor: colors.gray,
     borderRadius: normalize(1.5),
-    padding: 10,
+    padding: 6,
     marginVertical: 20,
   },
   input: {
@@ -89,7 +103,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.blue,
     borderRadius: normalize(1.5),
-    marginTop: 10,
+    marginTop: 6,
     alignItems: "center",
     justifyContent: "center",
   },

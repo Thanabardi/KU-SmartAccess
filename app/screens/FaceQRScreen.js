@@ -6,11 +6,13 @@ import {
   View,
   Image,
   Animated,
+  Alert,
 } from "react-native";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { manipulateAsync } from "expo-image-manipulator";
 import axios from "axios";
 
-import { useIsFocused } from "@react-navigation/native";
+import { useFocusEffect, useIsFocused } from "@react-navigation/native";
 
 import { Camera, CameraType } from "expo-camera";
 import * as FaceDetector from "expo-face-detector";
@@ -21,6 +23,7 @@ import { normalize } from "../utils/normalize";
 import Header from "../components/Header";
 import Status from "../components/Status";
 import { useAppContext } from "../contex/AppContex";
+import { retrieveData } from "../utils/saveLoadData";
 
 export default function FaceIDScreen({ navigation }) {
   const { appContex } = useAppContext();
@@ -29,10 +32,13 @@ export default function FaceIDScreen({ navigation }) {
   const isFocused = useIsFocused();
   const cameraType = CameraType.front;
 
-  const [progressText, setProgressText] = useState();
+  const [appConfig, setAppConfig] = useState();
+  const [accessToken, setAccessToken] = useState();
+  const [progressText, setProgressText] = useState(
+    "Move your head or verification QR Code toward the camera"
+  );
   const [hasCameraPermission, setCameraPermission] = useState();
   const [hastakePhoto, setHasTakePhoto] = useState(false);
-  const [photo, setPhoto] = useState(null);
 
   // useEffect(() => {
   //   Animated.timing(statusColor, {
@@ -41,6 +47,22 @@ export default function FaceIDScreen({ navigation }) {
   //     useNativeDriver: true,
   //   }).start();
   // }, []);
+
+  // check app setting
+  useFocusEffect(
+    useCallback(() => {
+      async function getConfigData() {
+        const config = await retrieveData("config");
+        if (config == null) {
+          navigation.navigate("ConfigScreen");
+        } else {
+          setAppConfig(config);
+          setAccessToken(await retrieveData("accessToken"));
+        }
+      }
+      getConfigData();
+    }, [])
+  );
 
   // check cameraPermission on startup
   useEffect(() => {
@@ -51,57 +73,77 @@ export default function FaceIDScreen({ navigation }) {
   }, []);
 
   async function takePic(pic) {
-    if (!hastakePhoto && pic.faces.length > 0) {
-      const options = {
-        quality: 1,
-        base64: true,
-        exif: false,
-      };
-      try {
-        await cameraRef.current
-          .takePictureAsync(options)
-          .then((photo) => {
-            setHasTakePhoto(true);
-            setPhoto(photo);
-            sendPhoto(photo);
-          })
-          .catch((error) => {
-            console.log(error);
-          });
-      } catch (error) {
-        console.log(error);
-      }
+    if (hastakePhoto || pic.faces.length == 0) {
+      return;
+    }
+    setProgressText("Hold Still");
+    const options = {
+      quality: 0,
+      base64: true,
+    };
+    try {
+      await cameraRef.current
+        .takePictureAsync(options)
+        .then((photo) => {
+          setHasTakePhoto(true);
+          sendPhoto(photo);
+        })
+        .catch((error) => {
+          console.error(error);
+        });
+    } catch (error) {
+      console.error(error);
     }
   }
 
   async function sendPhoto(photo) {
-    console.log(photo.uri);
+    setProgressText("Verifying...");
+    const manipPhoto = await manipulateAsync(
+      photo.uri,
+      [{ resize: { width: 600, height: 600 } }],
+      { base64: true, compress: 0.5 }
+    );
+    console.log(manipPhoto);
+    await axios
+      .post(
+        appConfig.faceRecogAPI,
+        {
+          file: manipPhoto.base64,
+          single: true,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "X-API-Key": appConfig.UUID,
+          },
+        }
+      )
+      .then((response) => {
+        console.log(response);
+        setHasTakePhoto(false);
+        setProgressText(
+          "Move your head or verification QR Code toward the camera"
+        );
+      })
+      .catch((error) => {
+        console.error(error);
+        Alert.alert("Failed to upload image", error.message, [{ text: "OK" }]);
+        setHasTakePhoto(false);
+        setProgressText(
+          "Move your head or verification QR Code toward the camera"
+        );
+      });
+  }
 
-    // for testing
+  async function validateTOTP(barCodeResult) {
+    if (hastakePhoto) {
+      return;
+    }
+    console.log(barCodeResult);
+    setHasTakePhoto(true);
     setTimeout(() => {
       setHasTakePhoto(false);
     }, 1000);
-
-    // await axios
-    //   .post(
-    //     `path`,
-    //     {
-    //       image: photo.uri,
-    //       door: "1",
-    //     },
-    //     {
-    //       headers: {
-    //         "content-type": "multipart/form-data",
-    //       },
-    //     }
-    //   )
-    //   .then((response) => {
-    //     console.log(response);
-    //   })
-    //   .catch((error) => {
-    //     console.log(error);
-    //     setTakePhoto(false);
-    //   });
   }
 
   function CameraPreviewUI() {
@@ -125,6 +167,7 @@ export default function FaceIDScreen({ navigation }) {
                 runClassifications:
                   FaceDetector.FaceDetectorClassifications.all,
               }}
+              onBarCodeScanned={(result) => validateTOTP(result.data)}
             >
               <Image
                 style={styles.cameraOverlay}
@@ -138,18 +181,6 @@ export default function FaceIDScreen({ navigation }) {
           )
         )}
       </View>
-    );
-  }
-
-  function ProgressUI() {
-    return (
-      <>
-        <Text style={styles.progressText}>
-          Move your head or verification QR Code toward the camera
-        </Text>
-        <Text style={styles.progressText}>Hold Still</Text>
-        <Text style={styles.progressText}>Verifying...</Text>
-      </>
     );
   }
 

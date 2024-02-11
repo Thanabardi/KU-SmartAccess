@@ -1,33 +1,59 @@
 import { useEffect, useRef, useState } from "react";
-import * as SecureStore from "expo-secure-store";
-import { AppState } from "react-native";
+import { Alert, AppState } from "react-native";
 
 import { connectBLE } from "../utils/connectBLE";
 import { useAppContext } from "../contex/AppContex";
+import { retrieveData, storeData } from "../utils/saveLoadData";
+import axios from "axios";
 
 export default function ConnectionStatus() {
   const { contexMethods } = useAppContext();
-  const { requestPermissions, connectBLEDevice, connectedDevice } = connectBLE();
-  const [participants, setParticipants] = useState([]);
+  const [accessToken, setAccessToken] = useState();
+  const [appConfig, setAppConfig] = useState();
+  const { requestPermissions, connectBLEDevice, connectedDevice } =
+    connectBLE();
   const appState = useRef(AppState.currentState);
 
   useEffect(() => {
-    const subscription = AppState.addEventListener("change", (nextAppState) => {
-      if (
-        appState.current.match(/inactive|background/) &&
-        nextAppState === "active"
-      ) {
-        // check door and server status on awake
-        connectDoorController();
-        getUserList();
+    const subscription = AppState.addEventListener(
+      "change",
+      async (nextAppState) => {
+        if (
+          appState.current.match(/inactive|background/) &&
+          nextAppState === "active"
+        ) {
+          setAppConfig(await retrieveData("config"));
+        }
+        appState.current = nextAppState;
       }
-      appState.current = nextAppState;
-    });
+    );
 
     return () => {
       subscription.remove();
     };
   }, []);
+
+  useEffect(() => {
+    if (appConfig == null) {
+      return;
+    }
+    // check door and server status
+    async function fecthData() {
+      await connectDoorController();
+      await getToken();
+    }
+    fecthData();
+  }, [appConfig]);
+
+  useEffect(() => {
+    if (accessToken == null) {
+      return;
+    }
+    async function fecthData() {
+      await getUserList();
+    }
+    fecthData();
+  }, [accessToken]);
 
   async function connectDoorController() {
     contexMethods.addOrReplaceContex(
@@ -43,32 +69,43 @@ export default function ConnectionStatus() {
     }
   }
 
+  async function getToken() {
+    return await axios
+      .post(appConfig.tokenAPI, {
+        username: appConfig.kuUsername,
+        password: appConfig.kuPassword,
+      })
+      .then((res) => {
+        console.log(res.data);
+        storeData("accessToken", res.data.access);
+        setAccessToken(res.data.access);
+      })
+      .catch((err) => {
+        console.log(err);
+        Alert.alert("Can't get token from the server", err.message, [
+          { text: "OK" },
+        ]);
+      });
+  }
+
   async function getUserList() {
     // get allowed users user list
-    console.log("call get user list Api");
-    // if error or not
-    contexMethods.addOrReplaceContex("isConnectedServer", true);
-    // await StoreData("participants", ["1111", "2222"]);
-    // await RetrieveData("participants");
-  }
-
-  async function storeData(key, value) {
-    const jsonValue = JSON.stringify(value);
-    await SecureStore.setItemAsync(key, jsonValue).catch((error) =>
-      console.error(error)
-    );
-  }
-
-  async function retrieveData(key) {
-    await SecureStore.getItemAsync(key)
-      .then((value) => {
-        console.log(value);
-        if (value != null) {
-          setParticipants(JSON.parse(value));
-        }
+    return await axios
+      .get(appConfig.participantsAPI, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "X-API-Key": appConfig.UUID,
+        },
       })
-      .catch((error) => {
-        console.log(error);
+      .then((res) => {
+        console.log(res.data);
+        storeData("participants", res.data.participants);
+        contexMethods.addOrReplaceContex("isConnectedServer", true);
+      })
+      .catch((err) => {
+        console.log(err);
+        Alert.alert("Can't get patticipants", err.message, [{ text: "OK" }]);
+        contexMethods.addOrReplaceContex("isConnectedServer", false);
       });
   }
 }
