@@ -1,7 +1,6 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
-import { ContexProvider } from "./app/contex/AppContex";
 import FaceQRScreen from "./app/screens/FaceQRScreen";
 import PasswordScreen from "./app/screens/PasswordScreen";
 import Footer from "./app/components/Footer";
@@ -46,7 +45,7 @@ export default function App() {
   }, []);
 
   return (
-    <ContexProvider>
+    <>
       <NavigationContainer ref={navigationRef}>
         <Stack.Navigator
           screenOptions={{
@@ -93,6 +92,6 @@ export default function App() {
         </Stack.Navigator>
       </NavigationContainer>
       <Footer getParticipants={getParticipants} />
-    </ContexProvider>
+    </>
   );
 }

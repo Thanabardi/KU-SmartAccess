@@ -89,8 +89,6 @@ export default function ConfigScreen({ props }) {
           text: "Yes",
           onPress: async () => {
             await deleteData("config");
-            await deleteData("participants");
-            await deleteData("accessToken");
             setAppConfig(CONFIG);
             setCanEdit(true);
           },
