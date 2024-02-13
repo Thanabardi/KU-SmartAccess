@@ -7,38 +7,31 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  Keyboard,
 } from "react-native";
-import { useCallback, useState } from "react";
-import axios from "axios";
+import { useState } from "react";
 
 import colors from "../config/colors";
 import { normalize } from "../utils/normalize";
 
 import Header from "../components/Header";
 import Status from "../components/Status";
-import { useFocusEffect } from "@react-navigation/native";
-import { retrieveData } from "../utils/saveLoadData";
 
-export default function PasswordScreen({ navigation }) {
+export default function PasswordScreen({ props }) {
   const [password, setPassword] = useState("");
 
-  // check app setting
-  useFocusEffect(
-    useCallback(() => {
-      async function getConfigData() {
-        if ((await retrieveData("config")) == null) {
-          navigation.navigate("ConfigScreen");
-        }
-      }
-      getConfigData();
-    }, [])
-  );
-
   function onSubmit() {
-    Alert.alert("Access Denied", "Incorrect Password", [
-      { text: "OK", onPress: () => console.log("OK Pressed") },
-    ]);
-    console.log(password);
+    Keyboard.dismiss();
+    if (password == "") {
+      return;
+    }
+    if (props?.participants.includes(password)) {
+      Alert.alert("Access Granted", "", [{ text: "OK" }]);
+    } else {
+      Alert.alert("Access Denied", "Permission denied or Incorrect password", [
+        { text: "OK" },
+      ]);
+    }
     setPassword("");
   }
 
@@ -51,6 +44,8 @@ export default function PasswordScreen({ navigation }) {
           onSubmitEditing={() => onSubmit()}
           value={password}
           placeholder="Password"
+          autoCapitalize="none"
+          secureTextEntry={true}
         />
         <TouchableOpacity
           style={styles.submitButton}
@@ -65,14 +60,18 @@ export default function PasswordScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.screenContainer}>
       <Header
-        navigation={navigation}
-        linkAlignLeft={true}
-        screenNavigate="FaceQRScreen"
-        screenNavigateText="< Use Face and QR Code"
-        Title="Password"
+        props={{
+          linkAlignLeft: true,
+          screenNavigate: "FaceQRScreen",
+          screenNavigateText: "< Use Face and QR Code",
+          Title: "Password",
+        }}
       />
       {inputFiledUI()}
-      <Status />
+      <Status
+        isConnectedDevice={props?.isConnectedDevice}
+        isConnectedServer={props?.isConnectedServer}
+      />
     </SafeAreaView>
   );
 }

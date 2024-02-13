@@ -8,6 +8,7 @@ import {
   TextInput,
   Alert,
   ScrollView,
+  Keyboard,
 } from "react-native";
 import { useCallback, useState } from "react";
 
@@ -31,7 +32,7 @@ const CONFIG = {
   faceRecogAPI: "https://iot.cpe.ku.ac.th/facerecog/api/terminal/recognition",
 };
 
-export default function ConfigScreen({ navigation }) {
+export default function ConfigScreen({ props }) {
   const [appConfig, setAppConfig] = useState(CONFIG);
   const [appPassword, setAppPassword] = useState("");
   const [canEdit, setCanEdit] = useState(false);
@@ -50,6 +51,7 @@ export default function ConfigScreen({ navigation }) {
   );
 
   function onSubmitPassword() {
+    Keyboard.dismiss();
     if (appConfig.appPassword == appPassword) {
       setCanEdit(true);
     } else {
@@ -69,8 +71,10 @@ export default function ConfigScreen({ navigation }) {
   }
 
   async function onSubmitConfigData() {
+    Keyboard.dismiss();
     if (checkNullConfig()) {
       await storeData("config", appConfig);
+      await props?.getParticipants();
     } else {
       Alert.alert("All fields must be completed", "", [{ text: "OK" }]);
     }
@@ -116,11 +120,12 @@ export default function ConfigScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.screenContainer}>
       <Header
-        navigation={navigation}
-        linkAlignLeft={true}
-        screenNavigate="FaceQRScreen"
-        screenNavigateText="< Exit"
-        Title={"Config"}
+        props={{
+          linkAlignLeft: true,
+          screenNavigate: "FaceQRScreen",
+          screenNavigateText: "< Exit",
+          Title: "Config",
+        }}
       />
       {canEdit ? (
         <>
@@ -186,9 +191,11 @@ export default function ConfigScreen({ navigation }) {
           <TextInput
             style={styles.loginInput}
             onChangeText={setAppPassword}
+            onSubmitEditing={onSubmitPassword}
             value={appPassword}
             placeholder="App Password"
-            onSubmitEditing={onSubmitPassword}
+            autoCapitalize="none"
+            secureTextEntry={true}
           />
           <TouchableOpacity
             style={styles.loginSubmitButton}

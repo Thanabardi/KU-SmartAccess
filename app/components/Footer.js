@@ -5,7 +5,7 @@ import colors from "../config/colors";
 import { normalize } from "../utils/normalize";
 import Menu from "./Menu";
 
-export default function Footer() {
+export default function Footer({ getParticipants }) {
   const [dt, setDt] = useState(new Date().toLocaleString());
 
   // keep update date time
@@ -29,7 +29,7 @@ export default function Footer() {
     <View style={styles.footerContainer}>
       <Text style={styles.footerText}>{dt[1]}</Text>
       <Text style={styles.footerText}>{dt[0]}</Text>
-      <Menu />
+      <Menu getParticipants={getParticipants} />
     </View>
   );
 }
