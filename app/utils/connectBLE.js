@@ -1,6 +1,7 @@
 import { useMemo, useState, useContext } from "react";
 import { PermissionsAndroid, Platform } from "react-native";
-import { DeviceContext} from "../../App"
+import { useAppContext } from "../contex/AppContex";
+import { DeviceContext } from "../../App"
 
 import * as ExpoDevice from "expo-device";
 
@@ -16,6 +17,7 @@ export function connectBLE() {
   const [connectedDevice, setConnectedDevice] = useState(null);
   const [readValue, setReadValue] = useState(null);
   const [device, setDevice] = useContext(DeviceContext)
+  const { contexMethods } = useAppContext();
 
   async function requestAndroid31Permissions() {
     const bluetoothScanPermission = await PermissionsAndroid.request(
@@ -70,29 +72,9 @@ export function connectBLE() {
     }
   }
 
-  // function isDuplicateDevice(devices, nextDevice){
-  //   return devices.findIndex(device => nextDevice.id === device.id) > -1;
-  // } 
-
-  // function scanForPeripherals(){
-  //   bleManager.startDeviceScan(null, null, (error, device) => {
-  //     if (error) {
-  //       console.log(error)
-  //     }
-  //     if (device && device.name?.includes("DoorController")){
-  //       setAllDevices((prevState) => {
-  //         if (!isDuplicateDevice(prevState, device)){
-  //             return [...prevState, device]
-  //         }
-  //         return prevState
-  //       })
-  //     }
-  //   })
-  // }
-
   async function connectBLEDevice(bleManager, isConnect) {
     setIsConnected(isConnect)
-    if (!isConnected){
+    if (!isConnected) {
       bleManager.startDeviceScan(null, null, (error, device) => {
         console.log("Scaning... " + device);
 
@@ -100,19 +82,18 @@ export function connectBLE() {
           console.log(error.message);
         }
 
-        if (device?.name ==='DoorController') {
+        if (device?.name === 'DoorController') {
           console.log("Starting connection with DoorController");
           bleManager.stopDeviceScan();
 
-          bleManager.connectToDevice(device.id, {autoConnect:true})
+          bleManager.connectToDevice(device.id, { autoConnect: true })
             .then(async (device) => {
               console.log(device.name)
               console.log("Discovering services and characteristics");
               setIsConnected(true);
               setConnectedDevice(device.name)
-              // console.log(device)
+              contexMethods.addOrReplaceContex('isConnectedDevice', true);
               await device.discoverAllServicesAndCharacteristics()
-              // await device.discoverAllServicesAndCharacteristics();
               const services = await device.services();
               services.forEach(async service => {
                 const characteristics = await device.characteristicsForService(service.uuid);
@@ -120,21 +101,19 @@ export function connectBLE() {
                 // characteristics.forEach(console.log);
               });
               setDevice(await device)
-              // await readCharacteristicForService(device)
-              // await writeCharacteristicForService(device)
-              // console.log(await getServicesAndCharacteristics(device))
               device.onDisconnected((error, disconnectedDevice) => {
                 console.log('Disconnected ', disconnectedDevice.name);
                 setIsConnected(false)
+                contexMethods.addOrReplaceContex('isConnectedDevice', false);
+              });
               return device
-            });      
             })
             .catch((error) => {
               console.log(error.message)
             })
         }
-        });
-      }
+      });
+    }
   }
 
   function disconnectBLEDevice() {
@@ -169,19 +148,19 @@ export function connectBLE() {
     console.log(rawData);
   }
 
-  async function readCharacteristicForService(device){
+  async function readCharacteristicForService(device) {
     await device.readCharacteristicForService('1E200001-B4A5-F678-E9A0-E12E34DCCA5E', '1E200003-B4A5-F678-E9A0-E12E34DCCA5E')
-    .then(valenc => {
-      console.log(base64.decode(valenc?.value));
-      setReadValue(base64.decode(valenc?.value))
-    });
+      .then(valenc => {
+        console.log(base64.decode(valenc?.value));
+        setReadValue(base64.decode(valenc?.value))
+      });
   }
 
-  async function writeCharacteristicForService(device, message){
+  async function writeCharacteristicForService(device, message) {
     await device.writeCharacteristicWithResponseForService('1E200001-B4A5-F678-E9A0-E12E34DCCA5E', '1E200002-B4A5-F678-E9A0-E12E34DCCA5E', base64.encode(message))
-    .then((characteristic) => {
-      console.log("Write message: ", characteristic.value);
-    })
+      .then((characteristic) => {
+        console.log("Write message: ", characteristic.value);
+      })
   }
 
   return {
@@ -190,7 +169,5 @@ export function connectBLE() {
     connectedDevice,
     readCharacteristicForService,
     writeCharacteristicForService,
-    // blueToothState,
-    // scanForPeripherals,
   };
 }
