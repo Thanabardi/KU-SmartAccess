@@ -40,7 +40,9 @@ export default function QrCodeScreen({}){
     <View>
         {totpKey? 
         <>
-          <QRCode value={`${totpKey}`} size={200}/>        
+          <View style={styles.elevation}>
+            <QRCode value={`${totpKey}`} size={200} />     
+          </View>   
           <View style={styles.container}>
             <Countdown />
           </View>
@@ -52,8 +54,15 @@ export default function QrCodeScreen({}){
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
+    paddingTop: 20,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  elevation: {
+    paddingHorizontal:20, 
+    paddingVertical:20,
+    elevation: 20,
+    shadowColor: '#171717',
+    backgroundColor: '#fff'
   },
 });
