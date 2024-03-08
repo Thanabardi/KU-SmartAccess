@@ -5,7 +5,7 @@ import stringToHex from "../utils/stringToHex"
 import { totpToken, totpOptions } from '@otplib/core';
 import { createDigest } from '@otplib/plugin-crypto-js';
 import { useEffect, useState } from "react";
-import { View, StyleSheet, ActivityIndicator } from "react-native";
+import { View, StyleSheet, ActivityIndicator, Text } from "react-native";
 import QRCode from 'react-native-qrcode-svg';
 import { Countdown } from "../components/CircleCountdown";
 
@@ -40,8 +40,9 @@ export default function QrCodeScreen({}){
     <View>
         {totpKey? 
         <>
+          <Text style={styles.header}> TOTP QR CODE</Text>
           <View style={styles.elevation}>
-            <QRCode value={`${totpKey}`} size={200} />     
+            <QRCode value={`${totpKey}`} size={250} />     
           </View>   
           <View style={styles.container}>
             <Countdown />
@@ -65,4 +66,11 @@ const styles = StyleSheet.create({
     shadowColor: '#171717',
     backgroundColor: '#fff'
   },
+  header: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 40,
+    textAlign: 'center',
+    textAlignVertical: 'center'
+  }
 });
