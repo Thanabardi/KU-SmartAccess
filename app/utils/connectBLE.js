@@ -2,6 +2,7 @@ import { useMemo, useState, useContext } from "react";
 import { PermissionsAndroid, Platform } from "react-native";
 import { useAppContext } from "../contex/AppContex";
 import { DeviceContext } from "../../App"
+import BackgroundService from 'react-native-background-actions';
 
 import * as ExpoDevice from "expo-device";
 
@@ -73,47 +74,64 @@ export function connectBLE() {
   }
 
   async function connectBLEDevice(bleManager, isConnect) {
-    setIsConnected(isConnect)
-    if (!isConnected) {
-      bleManager.startDeviceScan(null, null, (error, device) => {
-        console.log("Scaning... " + device);
+    const task = async () => {
+      await new Promise(async () => {
+        setIsConnected(isConnect)
+        if (!isConnected) {
+          bleManager.startDeviceScan(null, null, (error, device) => {
+            console.log("Scaning... " + device);
 
-        if (error) {
-          console.log(error.message);
+            if (error) {
+              console.log(error.message);
+            }
+
+            if (device?.name === 'DoorController') {
+              console.log("Starting connection with DoorController");
+              bleManager.stopDeviceScan();
+
+              bleManager.connectToDevice(device.id, { autoConnect: true })
+                .then(async (device) => {
+                  console.log(device.name)
+                  console.log("Discovering services and characteristics");
+                  setIsConnected(true);
+                  setConnectedDevice(device.name)
+                  contexMethods.addOrReplaceContex('isConnectedDevice', true);
+                  await device.discoverAllServicesAndCharacteristics()
+                  const services = await device.services();
+                  services.forEach(async service => {
+                    const characteristics = await device.characteristicsForService(service.uuid);
+                    // console.log(characteristics)
+                    // characteristics.forEach(console.log);
+                  });
+                  setDevice(await device)
+                  device.onDisconnected((error, disconnectedDevice) => {
+                    console.log('Disconnected ', disconnectedDevice.name);
+                    setIsConnected(false)
+                    contexMethods.addOrReplaceContex('isConnectedDevice', false);
+                  });
+                  return device
+                })
+                .catch((error) => {
+                  console.log(error.message)
+                })
+            }
+          });
         }
-
-        if (device?.name === 'DoorController') {
-          console.log("Starting connection with DoorController");
-          bleManager.stopDeviceScan();
-
-          bleManager.connectToDevice(device.id, { autoConnect: true })
-            .then(async (device) => {
-              console.log(device.name)
-              console.log("Discovering services and characteristics");
-              setIsConnected(true);
-              setConnectedDevice(device.name)
-              contexMethods.addOrReplaceContex('isConnectedDevice', true);
-              await device.discoverAllServicesAndCharacteristics()
-              const services = await device.services();
-              services.forEach(async service => {
-                const characteristics = await device.characteristicsForService(service.uuid);
-                // console.log(characteristics)
-                // characteristics.forEach(console.log);
-              });
-              setDevice(await device)
-              device.onDisconnected((error, disconnectedDevice) => {
-                console.log('Disconnected ', disconnectedDevice.name);
-                setIsConnected(false)
-                contexMethods.addOrReplaceContex('isConnectedDevice', false);
-              });
-              return device
-            })
-            .catch((error) => {
-              console.log(error.message)
-            })
-        }
-      });
+      })
     }
+    const options = {
+      taskName: 'BLE_Task',
+      taskTitle: 'BLE Background Task',
+      taskDesc: 'Connecting to BLE device in the background',
+      taskIcon: {
+        name: 'ic_launcher',
+        type: 'mipmap',
+      },
+      color: '#ffffff',
+    };
+    await BackgroundService.start(task, options);
+
+    return Promise.resolve();
   }
 
   function disconnectBLEDevice() {

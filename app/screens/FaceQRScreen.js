@@ -7,7 +7,9 @@ import {
   Image,
   Animated,
 } from "react-native";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useContext } from "react";
+import { DeviceContext } from "../../App"
+import { connectBLE } from "../utils/connectBLE"
 import axios from "axios";
 
 import { useIsFocused } from "@react-navigation/native";
@@ -21,6 +23,7 @@ import { normalize } from "../utils/normalize";
 import Header from "../components/Header";
 import Status from "../components/Status";
 import { useAppContext } from "../contex/AppContex";
+// import { livenessDectection } from "../components/Liveness";
 
 export default function FaceIDScreen({ navigation }) {
   const { appContex } = useAppContext();
@@ -28,11 +31,13 @@ export default function FaceIDScreen({ navigation }) {
   const resultColor = useRef(new Animated.Value(0)).current;
   const isFocused = useIsFocused();
   const cameraType = CameraType.front;
+  const { readCharacteristicForService, writeCharacteristicForService } = connectBLE();
 
   const [progressText, setProgressText] = useState();
   const [hasCameraPermission, setCameraPermission] = useState();
   const [hastakePhoto, setHasTakePhoto] = useState(false);
   const [photo, setPhoto] = useState(null);
+  const [device, setDevice] = useContext(DeviceContext);
 
   // useEffect(() => {
   //   Animated.timing(statusColor, {
@@ -64,6 +69,9 @@ export default function FaceIDScreen({ navigation }) {
             setHasTakePhoto(true);
             setPhoto(photo);
             sendPhoto(photo);
+            if (device.name != null) {
+              writeCharacteristicForService(device, "Photo verify session");
+            }
           })
           .catch((error) => {
             console.log(error);

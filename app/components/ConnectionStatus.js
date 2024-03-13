@@ -7,18 +7,18 @@ import { useAppContext } from "../contex/AppContex";
 import { BleManager } from "react-native-ble-plx"
 
 export default function ConnectionStatus() {
-  var isConnect;
   const { contexMethods } = useAppContext();
-  const { requestPermissions, connectBLEDevice, connectedDevice, readValue, readCharacteristicForService } = connectBLE();
+  const { requestPermissions, connectBLEDevice, connectedDevice, readCharacteristicForService } = connectBLE();
   const [participants, setParticipants] = useState([]);
   const appState = useRef(AppState.currentState);
   const bleManager = useMemo(() => new BleManager(), []);
   const [bleState, setBleState] = useState();
+  var isConnect = connectedDevice;
 
   useEffect(() => {
     bleManager.onStateChange((state) => {
       setBleState(state)
-      if (state === 'PoweredOff'){
+      if (state === 'PoweredOff') {
         isConnect = false
       } else if (state == 'PoweredOn') {
         connectDoorController(bleManager, isConnect);
@@ -41,7 +41,7 @@ export default function ConnectionStatus() {
     return () => {
       subscription.remove();
     };
-  }, [bleState, readValue]);
+  }, [bleState]);
 
   async function connectDoorController(bleManager, isConnect) {
     contexMethods.addOrReplaceContex(
@@ -53,7 +53,7 @@ export default function ConnectionStatus() {
     }
     const isPermissionsEnabled = await requestPermissions();
     if (isPermissionsEnabled) {
-      return connectBLEDevice(bleManager, isConnect);
+      return await connectBLEDevice(bleManager, isConnect);
     }
   }
 
