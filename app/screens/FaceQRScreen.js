@@ -6,11 +6,12 @@ import {
   View,
   Image,
   Animated,
+  Alert,
 } from "react-native";
-import { useState, useEffect, useRef, useContext } from "react";
-import { DeviceContext } from "../../App"
-import { connectBLE } from "../utils/connectBLE"
+import { useState, useEffect, useRef } from "react";
+import { connectBLE } from "../utils/connectBLE";
 import axios from "axios";
+import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 
 import { useIsFocused } from "@react-navigation/native";
 
@@ -22,22 +23,21 @@ import { normalize } from "../utils/normalize";
 
 import Header from "../components/Header";
 import Status from "../components/Status";
-import { useAppContext } from "../contex/AppContex";
 // import { livenessDectection } from "../components/Liveness";
 
-export default function FaceIDScreen({ navigation }) {
-  const { appContex } = useAppContext();
+export default function FaceIDScreen({ props }) {
   let cameraRef = useRef();
   const resultColor = useRef(new Animated.Value(0)).current;
   const isFocused = useIsFocused();
   const cameraType = CameraType.front;
   const { readCharacteristicForService, writeCharacteristicForService } = connectBLE();
 
-  const [progressText, setProgressText] = useState();
+  const [progressText, setProgressText] = useState(
+    "Move your head or verification QR Code toward the camera"
+  );
   const [hasCameraPermission, setCameraPermission] = useState();
   const [hastakePhoto, setHasTakePhoto] = useState(false);
   const [photo, setPhoto] = useState(null);
-  const [device, setDevice] = useContext(DeviceContext);
 
   // useEffect(() => {
   //   Animated.timing(statusColor, {
@@ -56,60 +56,77 @@ export default function FaceIDScreen({ navigation }) {
   }, []);
 
   async function takePic(pic) {
-    if (!hastakePhoto && pic.faces.length > 0) {
-      const options = {
-        quality: 1,
-        base64: true,
-        exif: false,
-      };
-      try {
-        await cameraRef.current
-          .takePictureAsync(options)
-          .then((photo) => {
-            setHasTakePhoto(true);
-            setPhoto(photo);
-            sendPhoto(photo);
-            if (device.name != null) {
-              writeCharacteristicForService(device, "Photo verify session");
-            }
-          })
-          .catch((error) => {
-            console.log(error);
-          });
-      } catch (error) {
-        console.log(error);
-      }
+    if (hastakePhoto || pic.faces.length == 0) {
+      return;
+    }
+    setProgressText("Hold Still");
+    const options = {
+      quality: 0,
+      base64: true,
+    };
+    try {
+      await cameraRef.current
+        .takePictureAsync(options)
+        .then((photo) => {
+          setHasTakePhoto(true);
+          sendPhoto(photo);
+          writeCharacteristicForService("Photo verify session");
+        })
+        .catch((error) => {
+          console.error(error);
+        });
+    } catch (error) {
+      console.error(error);
     }
   }
 
   async function sendPhoto(photo) {
-    console.log(photo.uri);
+    setProgressText("Verifying...");
+    const manipPhoto = await manipulateAsync(
+      photo.uri,
+      [{ resize: { width: 600, height: 600 } }],
+      { base64: true, format: SaveFormat.PNG, compress: 0.8 }
+    );
+    if (await props?.sendFacePhoto(manipPhoto.base64)) {
+      Alert.alert("Access Granted", "", [
+        {
+          text: "OK",
+          onPress: () => {
+            setHasTakePhoto(false);
+            setProgressText(
+              "Move your head or verification QR Code toward the camera"
+            );
+          },
+        },
+      ]);
+    } else {
+      Alert.alert(
+        "Access Denied",
+        "Permission denied or Facial detection failing",
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              setHasTakePhoto(false);
+              setProgressText(
+                "Move your head or verification QR Code toward the camera"
+              );
+            },
+          },
+        ]
+      );
+    }
+  }
 
-    // for testing
+  async function validateTOTP(barCodeResult) {
+    if (hastakePhoto) {
+      return;
+    }
+    console.log(barCodeResult);
+    setHasTakePhoto(true);
     setTimeout(() => {
       setHasTakePhoto(false);
     }, 1000);
-
-    // await axios
-    //   .post(
-    //     `path`,
-    //     {
-    //       image: photo.uri,
-    //       door: "1",
-    //     },
-    //     {
-    //       headers: {
-    //         "content-type": "multipart/form-data",
-    //       },
-    //     }
-    //   )
-    //   .then((response) => {
-    //     console.log(response);
-    //   })
-    //   .catch((error) => {
-    //     console.log(error);
-    //     setTakePhoto(false);
-    //   });
   }
 
   function CameraPreviewUI() {
@@ -133,11 +150,12 @@ export default function FaceIDScreen({ navigation }) {
                 runClassifications:
                   FaceDetector.FaceDetectorClassifications.all,
               }}
+              onBarCodeScanned={(result) => validateTOTP(result.data)}
             >
               <Image
                 style={styles.cameraOverlay}
                 source={
-                  appContex.isConnectedServer
+                  props?.isConnectedServer
                     ? require("../assets/face-qr-outline.png")
                     : require("../assets/qr-outline.png")
                 }
@@ -146,18 +164,6 @@ export default function FaceIDScreen({ navigation }) {
           )
         )}
       </View>
-    );
-  }
-
-  function ProgressUI() {
-    return (
-      <>
-        <Text style={styles.progressText}>
-          Move your head or verification QR Code toward the camera
-        </Text>
-        <Text style={styles.progressText}>Hold Still</Text>
-        <Text style={styles.progressText}>Verifying...</Text>
-      </>
     );
   }
 
@@ -175,14 +181,18 @@ export default function FaceIDScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.screenContainer}>
       <Header
-        navigation={navigation}
-        linkAlignLeft={false}
-        screenNavigate="PasswordScreen"
-        screenNavigateText="Use Password >"
-        Title="Face & QR Code"
+        props={{
+          linkAlignLeft: false,
+          screenNavigate: "PasswordScreen",
+          screenNavigateText: "Use Password >",
+          Title: "Face & QR Code",
+        }}
       />
       {CameraPreviewUI()}
-      <Status />
+      <Status
+        isConnectedDevice={props?.isConnectedDevice}
+        isConnectedServer={props?.isConnectedServer}
+      />
       <Text style={styles.progressText}>{progressText}</Text>
       {/* {ResultUI()} */}
     </SafeAreaView>

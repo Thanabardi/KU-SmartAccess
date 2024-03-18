@@ -1,7 +1,5 @@
-import { useMemo, useState, useContext } from "react";
+import { useState } from "react";
 import { PermissionsAndroid, Platform } from "react-native";
-import { useAppContext } from "../contex/AppContex";
-import { DeviceContext } from "../../App"
 import BackgroundService from 'react-native-background-actions';
 
 import * as ExpoDevice from "expo-device";
@@ -17,8 +15,6 @@ export function connectBLE() {
   const [isConnected, setIsConnected] = useState(false);
   const [connectedDevice, setConnectedDevice] = useState(null);
   const [readValue, setReadValue] = useState(null);
-  const [device, setDevice] = useContext(DeviceContext)
-  const { contexMethods } = useAppContext();
 
   async function requestAndroid31Permissions() {
     const bluetoothScanPermission = await PermissionsAndroid.request(
@@ -95,7 +91,6 @@ export function connectBLE() {
                   console.log("Discovering services and characteristics");
                   setIsConnected(true);
                   setConnectedDevice(device.name)
-                  contexMethods.addOrReplaceContex('isConnectedDevice', true);
                   await device.discoverAllServicesAndCharacteristics()
                   const services = await device.services();
                   services.forEach(async service => {
@@ -107,7 +102,6 @@ export function connectBLE() {
                   device.onDisconnected((error, disconnectedDevice) => {
                     console.log('Disconnected ', disconnectedDevice.name);
                     setIsConnected(false)
-                    contexMethods.addOrReplaceContex('isConnectedDevice', false);
                   });
                   return device
                 })
@@ -141,8 +135,8 @@ export function connectBLE() {
     }
   }
 
-  async function startStreamingData(device) {
-    if (device) {
+  async function startStreamingData() {
+    if (connectedDevice) {
       device.monitorCharacteristicForService(
         DOOR_CONTROLLER_UUID,
         DOOR_CONTROLLER_CHARACTERISTIC,
@@ -155,7 +149,7 @@ export function connectBLE() {
 
   function onEventTrigger(error, characteristic) {
     if (error) {
-      console.log(error);
+      console.error(error);
       return -1;
     } else if (!characteristic?.value) {
       console.log("No data received from device");
@@ -166,15 +160,18 @@ export function connectBLE() {
     console.log(rawData);
   }
 
-  async function readCharacteristicForService(device) {
-    await device.readCharacteristicForService('1E200001-B4A5-F678-E9A0-E12E34DCCA5E', '1E200003-B4A5-F678-E9A0-E12E34DCCA5E')
+  async function readCharacteristicForService() {
+    await connectedDevice.readCharacteristicForService('1E200001-B4A5-F678-E9A0-E12E34DCCA5E', '1E200003-B4A5-F678-E9A0-E12E34DCCA5E')
       .then(valenc => {
         console.log(base64.decode(valenc?.value));
         setReadValue(base64.decode(valenc?.value))
       });
   }
 
-  async function writeCharacteristicForService(device, message) {
+  async function writeCharacteristicForService(message) {
+    if (!connectedDevice) {
+      return;
+    }
     await device.writeCharacteristicWithResponseForService('1E200001-B4A5-F678-E9A0-E12E34DCCA5E', '1E200002-B4A5-F678-E9A0-E12E34DCCA5E', base64.encode(message))
       .then((characteristic) => {
         console.log("Write message: ", characteristic.value);

@@ -1,15 +1,14 @@
 import React from "react";
 import { Text, TouchableOpacity, StyleSheet } from "react-native";
-
+import { navigate } from "../utils/rootNavigation.js";
 import colors from "../config/colors";
 import { normalize } from "../utils/normalize";
 
-export default function Header(props) {
-  const navigation = props.navigation;
-  const linkAlignLeft = props.linkAlignLeft;
-  const screenNavigate = props.screenNavigate;
-  const screenNavigateText = props.screenNavigateText;
-  const Title = props.Title;
+export default function Header({ props }) {
+  const linkAlignLeft = props?.linkAlignLeft;
+  const screenNavigate = props?.screenNavigate;
+  const screenNavigateText = props?.screenNavigateText;
+  const Title = props?.Title;
 
   return (
     <>
@@ -18,7 +17,7 @@ export default function Header(props) {
           styles.linkContainer,
           { alignSelf: linkAlignLeft ? "flex-start" : "flex-end" },
         ]}
-        onPress={() => navigation.navigate(screenNavigate)}
+        onPress={() => navigate(screenNavigate)}
       >
         <Text style={styles.link}>{screenNavigateText}</Text>
       </TouchableOpacity>

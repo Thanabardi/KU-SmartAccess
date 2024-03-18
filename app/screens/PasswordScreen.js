@@ -7,8 +7,9 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  Keyboard,
 } from "react-native";
-import { useContext, useState } from "react";
+import { useState } from "react";
 import axios from "axios";
 
 import colors from "../config/colors";
@@ -16,25 +17,28 @@ import { normalize } from "../utils/normalize";
 
 import Header from "../components/Header";
 import Status from "../components/Status";
-import { DeviceContext } from "../../App"
-import { connectBLE } from "../utils/connectBLE"
+import { connectBLE } from "../utils/connectBLE";
 
-export default function PasswordScreen({ navigation }) {
+export default function PasswordScreen({ props }) {
   const [password, setPassword] = useState("");
-  const [device, setDevice] = useContext(DeviceContext);
-  const { readCharacteristicForService, writeCharacteristicForService } = connectBLE();
+  const { readCharacteristicForService, writeCharacteristicForService } =
+    connectBLE();
 
-
-  async function onSubmit() {
-    Alert.alert("Access Denied", "Incorrect Password", [
-      { text: "OK", onPress: () => console.log("OK Pressed") },
-    ]);
-    console.log(password);
-    setPassword("");
-    if (device?.name != null) {
-      writeCharacteristicForService(device, password)
+  function onSubmit() {
+    Keyboard.dismiss();
+    if (password == "") {
+      return;
     }
-    readCharacteristicForService(device)
+    if (props?.participants.includes(password)) {
+      Alert.alert("Access Granted", "", [{ text: "OK" }]);
+    } else {
+      Alert.alert("Access Denied", "Permission denied or Incorrect password", [
+        { text: "OK" },
+      ]);
+    }
+    setPassword("");
+    writeCharacteristicForService(password);
+    readCharacteristicForService();
   }
 
   function inputFiledUI() {
@@ -46,6 +50,8 @@ export default function PasswordScreen({ navigation }) {
           onSubmitEditing={() => onSubmit()}
           value={password}
           placeholder="Password"
+          autoCapitalize="none"
+          secureTextEntry={true}
         />
         <TouchableOpacity
           style={styles.submitButton}
@@ -60,14 +66,18 @@ export default function PasswordScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.screenContainer}>
       <Header
-        navigation={navigation}
-        linkAlignLeft={true}
-        screenNavigate="FaceQRScreen"
-        screenNavigateText="< Use Face and QR Code"
-        Title="Password"
+        props={{
+          linkAlignLeft: true,
+          screenNavigate: "FaceQRScreen",
+          screenNavigateText: "< Use Face and QR Code",
+          Title: "Password",
+        }}
       />
       {inputFiledUI()}
-      <Status />
+      <Status
+        isConnectedDevice={props?.isConnectedDevice}
+        isConnectedServer={props?.isConnectedServer}
+      />
     </SafeAreaView>
   );
 }
@@ -81,10 +91,10 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     width: "80%",
-    height: "20%",
+    height: "16%",
     backgroundColor: colors.gray,
     borderRadius: normalize(1.5),
-    padding: 10,
+    padding: 6,
     marginVertical: 20,
   },
   input: {
@@ -98,7 +108,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.blue,
     borderRadius: normalize(1.5),
-    marginTop: 10,
+    marginTop: 6,
     alignItems: "center",
     justifyContent: "center",
   },

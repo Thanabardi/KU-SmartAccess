@@ -2,11 +2,8 @@ import { Text, View, Image, StyleSheet } from "react-native";
 
 import colors from "../config/colors";
 import { normalize } from "../utils/normalize";
-import { useAppContext } from "../contex/AppContex";
 
-export default function Status() {
-  const { appContex } = useAppContext();
-
+export default function Status({ isConnectedDevice, isConnectedServer }) {
   function warningStatusUI(statusText) {
     return (
       <View style={styles.statusContainer}>
@@ -33,10 +30,10 @@ export default function Status() {
 
   return (
     <>
-      {!appContex.isConnectedDevice && (
+      {!isConnectedDevice && (
         <>{errorStatusUI("Can't connect door controller")}</>
       )}
-      {!appContex.isConnectedServer && (
+      {!isConnectedServer && (
         <>
           {warningStatusUI("Can't connect to the server")}
           {warningStatusUI("User permission may not in sync")}
@@ -58,6 +55,7 @@ const styles = StyleSheet.create({
     height: normalize(2),
     width: normalize(2),
     marginRight: 5,
+    marginVertical: 2,
   },
   warningText: {
     color: colors.yellow,
