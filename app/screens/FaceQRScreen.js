@@ -82,16 +82,34 @@ export default function FaceIDScreen({ props }) {
       { base64: true, format: SaveFormat.PNG, compress: 0.8 }
     );
     if (await props?.sendFacePhoto(manipPhoto.base64)) {
-      Alert.alert("Access Granted", "", [{ text: "OK" }]);
+      Alert.alert("Access Granted", "", [
+        {
+          text: "OK",
+          onPress: () => {
+            setHasTakePhoto(false);
+            setProgressText(
+              "Move your head or verification QR Code toward the camera"
+            );
+          },
+        },
+      ]);
     } else {
       Alert.alert(
         "Access Denied",
         "Permission denied or Facial detection failing",
-        [{ text: "OK" }]
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              setHasTakePhoto(false);
+              setProgressText(
+                "Move your head or verification QR Code toward the camera"
+              );
+            },
+          },
+        ]
       );
     }
-    setHasTakePhoto(false);
-    setProgressText("Move your head or verification QR Code toward the camera");
   }
 
   async function validateTOTP(barCodeResult) {

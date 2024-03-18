@@ -3,7 +3,7 @@ import { Alert } from "react-native";
 
 import { connectBLE } from "./connectBLE";
 import axios from "axios";
-import { retrieveData } from "./saveLoadData";
+import { retrieveData, storeData } from "./saveLoadData";
 import { navigate } from "./rootNavigation";
 
 export function serverConnection() {
@@ -66,6 +66,7 @@ export function serverConnection() {
       .then((res) => {
         console.log(res.data);
         setParticipants(res.data.participants);
+        storeData("participants", res.data.participants);
         setIsConnectedServer(true);
       })
       .catch((err) => {
@@ -78,6 +79,14 @@ export function serverConnection() {
           Alert.alert("Can't get patticipants", err.message, [{ text: "OK" }]);
           setIsConnectedServer(false);
         }
+        // get stored participants
+        async function retrieveParticipants() {
+          const storedParticipants = await retrieveData("participants");
+          if (storedParticipants != null) {
+            setParticipants(await retrieveData("participants"));
+          }
+        }
+        retrieveParticipants();
       });
   }
 
