@@ -20,7 +20,7 @@ export function serverConnection() {
     }
     const isPermissionsEnabled = await requestPermissions();
     if (isPermissionsEnabled) {
-      connectBLEDevice();
+      connectBLEDevice(isConnectedDevice);
     }
   }
 
@@ -141,5 +141,6 @@ export function serverConnection() {
     isConnectedDevice,
     isConnectedServer,
     participants,
+    connectedDevice
   };
 }

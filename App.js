@@ -7,23 +7,34 @@ import Footer from "./app/components/Footer";
 import ConfigScreen from "./app/screens/ConfigScreen";
 import { navigationRef, navigate } from "./app/utils/rootNavigation";
 import { serverConnection } from "./app/utils/serverConnection";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { AppState } from "react-native";
+import { BleManager } from "react-native-ble-plx";
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
   const appState = useRef(AppState.currentState);
+  const bleManager = useMemo(() => new BleManager(), []);
+
   const {
     connectDoorController,
     getParticipants,
     sendFacePhoto,
+    connectedDevice,
     isConnectedDevice,
     isConnectedServer,
     participants,
   } = serverConnection();
 
   useEffect(() => {
+    bleManager.onStateChange((state) => {
+      if (state === 'PoweredOff') {
+      } else if (state == 'PoweredOn') {
+        connectDoorController();
+      }
+    })
+
     const subscription = AppState.addEventListener(
       "change",
       async (nextAppState) => {
@@ -59,6 +70,7 @@ export default function App() {
             children={() => (
               <FaceQRScreen
                 props={{
+                  device: connectedDevice,
                   sendFacePhoto: sendFacePhoto,
                   isConnectedDevice: isConnectedDevice,
                   isConnectedServer: isConnectedServer,
@@ -72,6 +84,7 @@ export default function App() {
             children={() => (
               <PasswordScreen
                 props={{
+                  device: connectedDevice,
                   isConnectedDevice: isConnectedDevice,
                   isConnectedServer: isConnectedServer,
                   participants: participants,

@@ -24,6 +24,8 @@ export default function PasswordScreen({ props }) {
   const { readCharacteristicForService, writeCharacteristicForService } =
     connectBLE();
 
+  console.log(props?.device)
+
   function onSubmit() {
     Keyboard.dismiss();
     if (password == "") {
@@ -37,8 +39,8 @@ export default function PasswordScreen({ props }) {
       ]);
     }
     setPassword("");
-    writeCharacteristicForService(password);
-    readCharacteristicForService();
+    writeCharacteristicForService(props?.device, password);
+    readCharacteristicForService(props?.device);
   }
 
   function inputFiledUI() {

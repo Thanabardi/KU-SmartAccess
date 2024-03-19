@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { PermissionsAndroid, Platform } from "react-native";
 import BackgroundService from 'react-native-background-actions';
+import { BleManager } from "react-native-ble-plx";
 
 import * as ExpoDevice from "expo-device";
 
@@ -11,6 +12,7 @@ const DOOR_CONTROLLER_UUID = "1E200001-B4A5-F678-E9A0-E12E34DCCA5E";
 const DOOR_CONTROLLER_CHARACTERISTIC = "1E200003-B4A5-F678-E9A0-E12E34DCCA5E";
 
 export function connectBLE() {
+  const bleManager = useMemo(() => new BleManager(), []);
   const [allDevices, setAllDevices] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [connectedDevice, setConnectedDevice] = useState(null);
@@ -69,7 +71,7 @@ export function connectBLE() {
     }
   }
 
-  async function connectBLEDevice(bleManager, isConnect) {
+  async function connectBLEDevice(isConnect) {
     const task = async () => {
       await new Promise(async () => {
         setIsConnected(isConnect)
@@ -90,7 +92,7 @@ export function connectBLE() {
                   console.log(device.name)
                   console.log("Discovering services and characteristics");
                   setIsConnected(true);
-                  setConnectedDevice(device.name)
+
                   await device.discoverAllServicesAndCharacteristics()
                   const services = await device.services();
                   services.forEach(async service => {
@@ -98,9 +100,13 @@ export function connectBLE() {
                     // console.log(characteristics)
                     // characteristics.forEach(console.log);
                   });
-                  setDevice(await device)
-                  device.onDisconnected((error, disconnectedDevice) => {
-                    console.log('Disconnected ', disconnectedDevice.name);
+
+                  // set connected Device
+                  setConnectedDevice(await device);
+
+                  device.onDisconnected(async (error, disconnectedDevice) => {
+                    console.log('Disconnected from device');
+                    setConnectedDevice(null)
                     setIsConnected(false)
                   });
                   return device
@@ -128,10 +134,9 @@ export function connectBLE() {
     return Promise.resolve();
   }
 
-  function disconnectBLEDevice() {
+  async function disconnectBLEDevice() {
     if (connectedDevice) {
       bleManager.cancelDeviceConnection(connectedDevice.id);
-      setConnectedDevice(null);
     }
   }
 
@@ -160,7 +165,7 @@ export function connectBLE() {
     console.log(rawData);
   }
 
-  async function readCharacteristicForService() {
+  async function readCharacteristicForService(connectedDevice) {
     await connectedDevice.readCharacteristicForService('1E200001-B4A5-F678-E9A0-E12E34DCCA5E', '1E200003-B4A5-F678-E9A0-E12E34DCCA5E')
       .then(valenc => {
         console.log(base64.decode(valenc?.value));
@@ -168,11 +173,11 @@ export function connectBLE() {
       });
   }
 
-  async function writeCharacteristicForService(message) {
+  async function writeCharacteristicForService(connectedDevice, message) {
     if (!connectedDevice) {
       return;
     }
-    await device.writeCharacteristicWithResponseForService('1E200001-B4A5-F678-E9A0-E12E34DCCA5E', '1E200002-B4A5-F678-E9A0-E12E34DCCA5E', base64.encode(message))
+    await connectedDevice.writeCharacteristicWithResponseForService('1E200001-B4A5-F678-E9A0-E12E34DCCA5E', '1E200002-B4A5-F678-E9A0-E12E34DCCA5E', base64.encode(message))
       .then((characteristic) => {
         console.log("Write message: ", characteristic.value);
       })

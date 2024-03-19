@@ -46,7 +46,7 @@ export default function FaceIDScreen({ props }) {
   //     useNativeDriver: true,
   //   }).start();
   // }, []);
-
+  console.log(props?.device)
   // check cameraPermission on startup
   useEffect(() => {
     (async () => {
@@ -70,7 +70,7 @@ export default function FaceIDScreen({ props }) {
         .then((photo) => {
           setHasTakePhoto(true);
           sendPhoto(photo);
-          writeCharacteristicForService("Photo verify session");
+          writeCharacteristicForService(props?.device, "Photo verify session");
         })
         .catch((error) => {
           console.error(error);
