@@ -20,6 +20,10 @@ char fifoBuffer[MAX_BUFFER_SIZE][MAX_STRING_LENGTH];
 int fifoHead = 0;
 int fifoTail = 0;
 
+const int lightSensorPin = A0; // Analog pin where the light sensor is connected
+const int lightPin = 25;     // Pin to control based on light sensor reading
+const int LIGHT_THRESHOLD = 175; // Adjust this value according to your requirements
+
 BLECharacteristic doorCharacteristic(
     BLEUUID((uint16_t)0x2A6E),
     BLECharacteristic::PROPERTY_READ |
@@ -100,8 +104,35 @@ class CharacteristicCallbacks : public BLECharacteristicCallbacks {
     }
 };
 
+// lux
+const float m = 0.01;              // Slope (calibration factor)
+const float b = 0;                 // Y-intercept (offset)
+float lux;                         // Variable to store lux value
+
+float computeVin(int adc) {
+    return (1.1 * adc) / 4095.0;
+}
+
+float computeRl(float v) {
+    return v * 33000.0 / (3.3 - v);
+}
+
+float computeLux(float rl) {
+    // from graph
+    float result;
+    if (rl == 0) {
+        rl = 100; // Default value if rl is 0
+    }
+    result = 10000.0 / pow(((rl / 1000.0) * 10.0), (4.0 / 3.0));
+    return result;
+}
+
 void setup() {
   Serial.begin(9600);
+  delay(1000);
+
+  //light
+  pinMode(lightPin, OUTPUT); // Set USB presence pin as input with internal pull-up resistor
 
   BLEDevice::init("DoorController");
 
@@ -147,6 +178,29 @@ void setup() {
 
 void loop() {
   checkToReconnect();
+  // light   
+  Serial.print("Light sensor value : ");
+  int lightSensorValue = analogRead(lightSensorPin);
+
+  // Convert sensor value to lux using linear equation
+  float vin = computeVin(lightSensorValue);
+   float rl = computeRl(vin);
+   float lux = computeLux(rl);
+
+  // Print lux value to Serial Monitor
+  Serial.print("Lux value: ");
+  Serial.println(lux);
+  delay(1000);
+    // Check if light is too low
+  if (lux < LIGHT_THRESHOLD) {
+    // Turn on port
+    digitalWrite(lightPin, LOW);
+    Serial.println("Light too low, port turned on.");
+  } else {
+    // Turn off port
+    digitalWrite(lightPin, HIGH);
+    Serial.println("Light level normal, port turned off.");
+  }
 
   if (deviceConnected) {
     txValue = random(-10, 20);
