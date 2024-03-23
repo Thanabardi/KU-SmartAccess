@@ -41,10 +41,12 @@ BLECharacteristic clientCharacteristic(
 class MyServerCallbacks : public BLEServerCallbacks {
   void onConnect(BLEServer *pServer) {
     deviceConnected = true;
+    pServer->getAdvertising()->stop(); // Stop advertising when a device connects
   }
 
   void onDisconnect(BLEServer *pServer) {
     deviceConnected = false;
+    pServer->getAdvertising()->start(); // Start advertising when a device disconnects
     Serial.println("Disconnected from central device");
   }
 };
@@ -105,8 +107,6 @@ class CharacteristicCallbacks : public BLECharacteristicCallbacks {
 };
 
 // lux
-const float m = 0.01;              // Slope (calibration factor)
-const float b = 0;                 // Y-intercept (offset)
 float lux;                         // Variable to store lux value
 
 float computeVin(int adc) {
@@ -184,8 +184,8 @@ void loop() {
 
   // Convert sensor value to lux using linear equation
   float vin = computeVin(lightSensorValue);
-   float rl = computeRl(vin);
-   float lux = computeLux(rl);
+  float rl = computeRl(vin);
+  float lux = computeLux(rl);
 
   // Print lux value to Serial Monitor
   Serial.print("Lux value: ");
