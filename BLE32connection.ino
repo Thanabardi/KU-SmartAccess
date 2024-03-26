@@ -2,12 +2,14 @@
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <BLE2902.h>
+#include <Adafruit_NeoPixel.h>
 
 BLEServer *pServer = NULL;
 BLECharacteristic *pCharacteristic;
 BLECharacteristic *pRxCharacteristic;
 bool deviceConnected = false;
 bool oldDeviceConnected = false;
+
 int txValue = 0;
 
 #define MAX_BUFFER_SIZE 100
@@ -20,9 +22,22 @@ char fifoBuffer[MAX_BUFFER_SIZE][MAX_STRING_LENGTH];
 int fifoHead = 0;
 int fifoTail = 0;
 
-const int lightSensorPin = A0; // Analog pin where the light sensor is connected
-const int lightPin = 25;     // Pin to control based on light sensor reading
+// const int lightSensorPin = A0; // Analog pin where the light sensor is connected
+// const int lightPin = 25;     // Pin to control based on light sensor reading
 const int LIGHT_THRESHOLD = 175; // Adjust this value according to your requirements
+#define LIGHT_SENSOR_PIN 26  // GPIO 26
+
+// // Define the pin for the RGB LED
+#define RGB_PIN   27  // GPIO 27
+#define NUM_LEDS   12  // Number of LEDs in your ZX-RGB12R strip
+
+// // Create an array of CRGB objects to represent the LEDs
+// CRGB leds[NUM_LEDS];
+Adafruit_NeoPixel ring(NUM_LEDS, RGB_PIN, NEO_GRB + NEO_KHZ800);
+
+#define IS_LOCK_PIN 32
+#define DISTANCE_PIN   35  // GPIO 35
+
 
 BLECharacteristic doorCharacteristic(
     BLEUUID((uint16_t)0x2A6E),
@@ -106,25 +121,11 @@ class CharacteristicCallbacks : public BLECharacteristicCallbacks {
     }
 };
 
-// lux
-float lux;                         // Variable to store lux value
-
-float computeVin(int adc) {
-    return (1.1 * adc) / 4095.0;
-}
-
-float computeRl(float v) {
-    return v * 33000.0 / (3.3 - v);
-}
-
-float computeLux(float rl) {
-    // from graph
-    float result;
-    if (rl == 0) {
-        rl = 100; // Default value if rl is 0
-    }
-    result = 10000.0 / pow(((rl / 1000.0) * 10.0), (4.0 / 3.0));
-    return result;
+void led_open(int r, int g, int b) {
+  for(int i = 0; i < ring.numPixels(); i++){
+    ring.setPixelColor(i, r, g, b, 0);
+  }
+  ring.show(); // Update LEDs with new colors
 }
 
 void setup() {
@@ -132,8 +133,17 @@ void setup() {
   delay(1000);
 
   //light
-  pinMode(lightPin, OUTPUT); // Set USB presence pin as input with internal pull-up resistor
-
+  // pinMode(lightPin, OUTPUT); // Set USB presence pin as input with internal pull-up resistor
+  pinMode(BUTTON_PIN, INPUT_PULLUP); // Assuming the switch is connected to GND when pressed
+  // FastLED.addLeds<WS2812,RGB_PIN,GRB>(leds, NUM_LEDS);
+  ring.begin();           
+  ring.show();            
+  ring.setBrightness(50); 
+  if (ring.numPixels() > 0) {
+    Serial.println("LED strip is connected.");
+  } else {
+    Serial.println("LED strip is not connected. Please check your connections.");
+  }
   BLEDevice::init("DoorController");
 
   // create server
@@ -168,39 +178,47 @@ void setup() {
 
   pServer->getAdvertising()->addServiceUUID(pService->getUUID());
 
+
+
   // start service
   pService->start();
-
-  // start advertising
-  pServer->getAdvertising()->start();
-  Serial.println("Waiting for a client connection to notify");
+  
+  // Start advertising if the switch is pressed
+  Serial.println("Finish setup: Waiting for a client connection to notify");
 }
 
 void loop() {
   checkToReconnect();
   // light   
-  Serial.print("Light sensor value : ");
-  int lightSensorValue = analogRead(lightSensorPin);
+  // int lightSensorValue = analogRead(lightSensorPin);
 
   // Convert sensor value to lux using linear equation
-  float vin = computeVin(lightSensorValue);
-  float rl = computeRl(vin);
-  float lux = computeLux(rl);
 
   // Print lux value to Serial Monitor
-  Serial.print("Lux value: ");
-  Serial.println(lux);
+  // Serial.print("Lux value: ");
+  int lightValue = analogRead(LIGHT_SENSOR_PIN);
+  Serial.print("Light value: ");
+  Serial.println(lightValue);
   delay(1000);
-    // Check if light is too low
-  if (lux < LIGHT_THRESHOLD) {
-    // Turn on port
-    digitalWrite(lightPin, LOW);
+
+  int distanceValue = analogRead(DISTANCE_PIN);
+  Serial.print("Distance value: ");
+  Serial.println(distanceValue);
+
+  int isLock = analogRead(IS_LOCK_PIN);
+  Serial.print("isLock value: ");
+  Serial.println(isLock);
+
+  // Update NeoPixel LED strip colors
+  if (lightValue < LIGHT_THRESHOLD) {
+    led_open(255, 255, 255);
     Serial.println("Light too low, port turned on.");
   } else {
-    // Turn off port
-    digitalWrite(lightPin, HIGH);
+    led_open(0, 0, 0);
     Serial.println("Light level normal, port turned off.");
   }
+
+  delay(1000);  // Wait for 1 second
 
   if (deviceConnected) {
     txValue = random(-10, 20);
