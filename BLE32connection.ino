@@ -4,12 +4,14 @@
 #include <BLE2902.h>
 #include <Adafruit_NeoPixel.h>
 
+
 BLEServer *pServer = NULL;
 BLECharacteristic *pCharacteristic;
 BLECharacteristic *pRxCharacteristic;
 bool deviceConnected = false;
 bool oldDeviceConnected = false;
-
+bool advertisingState = false;
+const int BUTTON_PIN = 16;
 int txValue = 0;
 
 #define MAX_BUFFER_SIZE 100
@@ -25,7 +27,7 @@ int fifoTail = 0;
 // const int lightSensorPin = A0; // Analog pin where the light sensor is connected
 // const int lightPin = 25;     // Pin to control based on light sensor reading
 const int LIGHT_THRESHOLD = 175; // Adjust this value according to your requirements
-#define LIGHT_SENSOR_PIN 26  // GPIO 26
+#define LIGHT_SENSOR_PIN 34  // GPIO 26
 
 // // Define the pin for the RGB LED
 #define RGB_PIN   27  // GPIO 27
@@ -36,7 +38,9 @@ const int LIGHT_THRESHOLD = 175; // Adjust this value according to your requirem
 Adafruit_NeoPixel ring(NUM_LEDS, RGB_PIN, NEO_GRB + NEO_KHZ800);
 
 #define IS_LOCK_PIN 32
-#define DISTANCE_PIN   35  // GPIO 35
+#define DOOR_BUTTON_PIN 33
+#define UNLOCK_DOOR_PIN 26
+#define DISTANCE_PIN 35  // GPIO 35
 
 
 BLECharacteristic doorCharacteristic(
@@ -56,30 +60,60 @@ BLECharacteristic clientCharacteristic(
 class MyServerCallbacks : public BLEServerCallbacks {
   void onConnect(BLEServer *pServer) {
     deviceConnected = true;
-    pServer->getAdvertising()->stop(); // Stop advertising when a device connects
+    if (!advertisingState) {
+      pServer->getAdvertising()->stop(); // Stop advertising when a device connects if advertising state is off
+    }
   }
 
   void onDisconnect(BLEServer *pServer) {
     deviceConnected = false;
-    pServer->getAdvertising()->start(); // Start advertising when a device disconnects
+    if (!advertisingState) {
+      pServer->getAdvertising()->start(); // Start advertising when a device disconnects if advertising state is off
+    }
     Serial.println("Disconnected from central device");
   }
 };
 
 void checkToReconnect() {
-  // disconnected so advertise
-  if (!deviceConnected && oldDeviceConnected) {
-    delay(500); // give the Bluetooth stack the chance to get things ready
-    pServer->startAdvertising(); // restart advertising
-    Serial.println("Disconnected: start advertising");
-    oldDeviceConnected = deviceConnected;
-  }
-  // connected so reset boolean control
-  if (deviceConnected && !oldDeviceConnected) {
-    // do stuff here on connecting
-    Serial.println("Reconnected");
-    oldDeviceConnected = deviceConnected;
-  }
+    static bool lastButtonState = true; // Initial state assumed to be not pressed
+    bool buttonState = digitalRead(BUTTON_PIN);
+
+    if (buttonState != lastButtonState) {
+        delay(50); // Debounce delay
+        if (buttonState == LOW) { // Button pressed
+            advertisingState = !advertisingState; // Toggle advertising state
+            if (advertisingState) {
+                pServer->getAdvertising()->start(); // Start advertising
+                Serial.println("Bluetooth sharing started");
+            } else {
+                pServer->getAdvertising()->stop(); // Stop advertising
+                Serial.println("Bluetooth sharing stopped");
+            }
+        }
+    }
+    lastButtonState = buttonState;
+
+    // disconnected so advertise
+    if (!deviceConnected && oldDeviceConnected) {
+        delay(500); // Give the Bluetooth stack the chance to get things ready
+        if (!advertisingState) {
+            pServer->startAdvertising(); // Restart advertising only if the button is not pressed
+        }
+        Serial.println("Disconnected from device");
+        oldDeviceConnected = deviceConnected;
+    }
+
+    // connected so stop advertising
+    if (deviceConnected && !oldDeviceConnected) {
+        if (advertisingState) {
+            pServer->getAdvertising()->stop(); // Stop advertising
+            Serial.println("Bluetooth sharing stopped");
+            advertisingState = false;
+        }
+        // do stuff here on connecting
+        Serial.println("Reconnected");
+        oldDeviceConnected = deviceConnected;
+    }
 }
 
 void addToBuffer(const std::string& str) {
@@ -135,6 +169,8 @@ void setup() {
   //light
   // pinMode(lightPin, OUTPUT); // Set USB presence pin as input with internal pull-up resistor
   pinMode(BUTTON_PIN, INPUT_PULLUP); // Assuming the switch is connected to GND when pressed
+  pinMode(DOOR_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(UNLOCK_DOOR_PIN, OUTPUT);
   // FastLED.addLeds<WS2812,RGB_PIN,GRB>(leds, NUM_LEDS);
   ring.begin();           
   ring.show();            
@@ -209,6 +245,24 @@ void loop() {
   Serial.print("isLock value: ");
   Serial.println(isLock);
 
+  int buttonDoorCheck = analogRead(DOOR_BUTTON_PIN);
+  bool buttonDoor = digitalRead(DOOR_BUTTON_PIN);
+  Serial.print("button_door value: ");
+  Serial.println(buttonDoorCheck);
+  Serial.print("button_door bool: ");
+  Serial.println(buttonDoor);
+
+  int readDoorUnlock = analogRead(UNLOCK_DOOR_PIN);
+  Serial.print("readDoorUnlock value: ");
+  Serial.println(readDoorUnlock);
+  // Unlock door
+  if (buttonDoorCheck == 0 && isLock == 0){
+    Serial.println("Unlock door");
+    digitalWrite(UNLOCK_DOOR_PIN, LOW);
+    delay(5000);
+    digitalWrite(UNLOCK_DOOR_PIN, HIGH);
+  }
+
   // Update NeoPixel LED strip colors
   if (lightValue < LIGHT_THRESHOLD) {
     led_open(255, 255, 255);
@@ -233,7 +287,6 @@ void loop() {
     // notify
     pCharacteristic->notify();
     Serial.println("Send value: " + String(txString) + "\n");
-    Serial.println("Device: " + String(deviceConnected) + "\n");
 
     // read message
     processBuffer();
